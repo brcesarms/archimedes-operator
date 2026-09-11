@@ -47,21 +47,33 @@ Ele roda um script que configura **tudo automaticamente**:
 
 ## 📥 Passo 1 — Baixar o script
 
-Na máquina Windows, abra o navegador e acesse:
+> 💡 **Método recomendado (preserva a codificação):** baixar direto pelo PowerShell, sem navegador.
 
+Abra o **Windows PowerShell** (pode ser normal, não precisa ser admin ainda) e cole:
+
+```powershell
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/brcesarms/projeto-bancada/main/scripts/powershell/setup-ssh-pri.ps1" -OutFile "$env:USERPROFILE\Downloads\setup-ssh-pri.ps1"
 ```
-https://raw.githubusercontent.com/brcesarms/projeto-bancada/main/scripts/powershell/setup-ssh-pri.ps1
+
+Confirme que baixou:
+
+```powershell
+Get-Item "$env:USERPROFILE\Downloads\setup-ssh-pri.ps1" | Select-Object Name, Length
 ```
 
-Se o navegador mostrar o conteúdo (texto), faça assim:
+---
 
-1. Pressione **Ctrl+A** (selecionar tudo)
-2. **Ctrl+C** (copiar)
-3. Abra o **Bloco de Notas** (Notepad)
-4. **Ctrl+V** (colar)
-5. **Salvar como** → nome: `setup-ssh-pri.ps1` — atenção: na caixa "Tipo", escolha **"Todos os arquivos (*.*)"** e salve em uma pasta fácil, ex: `C:\ssh-setup\`
+## ⚠️ Passo 1.5 — Caso você já tenha baixado da forma antiga (navegador / copiar-colar)
 
-> ✅ Pronto: o arquivo `setup-ssh-pri.ps1` está salvo na máquina.
+Se utilizou o método antigo (copiar do navegador e colar no Bloco de Notas), o arquivo pode ter ficado com **codificação errada** — é o que causou o erro `Token '}' inesperado` no PowerShell. **Apague o arquivo antigo e baixe de novo** com o comando do Passo 1, ou converta a codificação assim:
+
+```powershell
+# Converter arquivo existente para UTF-8 com BOM (compatível com PowerShell 5.1)
+$caminho = "$env:USERPROFILE\Downloads\setup-ssh-pri.ps1"
+$conteudo = Get-Content -Path $caminho -Raw -Encoding UTF8
+[System.IO.File]::WriteAllText($caminho, $conteudo, [System.Text.UTF8Encoding]::new($true))
+Write-Host "✔ Arquivo convertido para UTF-8 com BOM!"
+```
 
 ---
 
@@ -92,7 +104,14 @@ Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
 
 Agora navegue até a pasta onde salvou o script e execute.
 
-**Exemplo (se salvou em `C:\ssh-setup\`):**
+**Padrão (baixou com o Passo 1 para o Downloads):**
+
+```powershell
+cd $env:USERPROFILE\Downloads
+.\setup-ssh-pri.ps1
+```
+
+**Se salvou em outra pasta (ex: `C:\ssh-setup\`):**
 
 ```powershell
 cd C:\ssh-setup
@@ -163,6 +182,7 @@ Depois, é só me avisar (Archimedes) com esses dados que eu conecto, coletor in
 | ❌ *"requires ... as Administrator"* | Janela não é admin | Repita o **Passo 2** (botão direito → Executar como administrador) |
 | ❌ *"não é possível carregar o arquivo ... não existe"* | Pasta errada | Confirme o `cd` no **Passo 4** — o arquivo precisa estar na pasta |
 | ❌ *"não é um cmdlet reconhecido"* | Faltou o `.\` | Use `.\setup-ssh-pri.ps1` |
+| ❌ *`Token '}' inesperado` / `ParserError`* | ⚠️ **Codificação errada** — arquivo salvo como UTF-8 sem BOM (ex: copiado do navegador) | Rebaixe com o **Passo 1** (Invoke-WebRequest) ou use a conversão do **Passo 1.5** |
 | ❌ *O script rodou mas mostrou erro na instalação* | Recurso do Windows falhou ao baixar | Verifique internet e rode como admin novamente |
 | ❌ *Nada acontece ao dar 2 cliques no .ps1* | Duplo clique não executa script | Sempre executar **dentro do PowerShell** (Passo 4) |
 

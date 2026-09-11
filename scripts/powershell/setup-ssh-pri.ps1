@@ -1,4 +1,4 @@
-#Requires -RunAsAdministrator
+﻿#Requires -RunAsAdministrator
 <#
 .SYNOPSIS
     Configura o OpenSSH Server no Windows e autoriza a chave SSH do Bruno.
