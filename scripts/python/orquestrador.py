@@ -217,13 +217,16 @@ def gerar_manifesto(inventario, status_copias, cliente, data, saida=None):
             pasta = item.get("pasta", "?")
             codigo = item.get("codigo", 8)
             obs = item.get("obs", "")
-            if codigo < 8:
-                status = "✅"
-            elif codigo == -1:
+            origem = item.get("origem", "")
+            if codigo == -1:
                 status = "☐"
+            elif codigo < 8:
+                status = "✅"
             else:
                 status = "❌"
             obs = f"code={codigo} {obs}".strip()
+            if origem:
+                obs = f"origem={origem} {obs}".strip()
             linhas.append(f"| `{usuario}/{pasta}` | {status} | {obs} |")
     else:
         linhas.append("_Backup não executado ou sem dados._")
