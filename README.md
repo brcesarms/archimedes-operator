@@ -17,7 +17,7 @@ projeto-bancada/
 │   │   ├── inventario.ps1     <-- Inventário JSON (Etapa 1)
 │   │   └── backup-robocopy.ps1 <-- Backup por usuário (Etapa 2)
 │   └── python/
-│       └── orquestrador.py    <-- Orquestrador principal (esqueleto)
+│       └── orquestrador.py    <-- Orquestrador completo (SFTP + JSON + manifesto)
 ├── templates/
 │   └── MANIFESTO_TEMPLATE.md  <-- Modelo do manifesto Obsidian (Etapa 3)
 ├── manifests/                 <-- Manifestos REAIS (ignorados pelo Git 🛡️)

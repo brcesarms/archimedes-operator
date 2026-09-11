@@ -58,7 +58,7 @@ Executar de forma **automatizada e não-interativa** o processo de:
 | :--- | :--- | :--- |
 | `1` | Coleta de Inventário | JSON estruturado (usuários, chave OEM, softwares) |
 | `2` | Backup Robocopy | Logs de cópia + exit code |
-| `3` | Manifesto Obsidian | `MANIFESTO_<CLIENTE>_<DATA>.md` em `t.i/` |
+| `3` | Manifesto Obsidian/Markdown | `MANIFESTO_<CLIENTE>_<DATA>.md` em `manifests/` |
 
 ---
 
@@ -255,9 +255,11 @@ MANIFESTO_<CLIENTE>_<DATA>.md
 ```
 Exemplo: `MANIFESTO_TECNOSOFT_2026-09-11.md`
 
-### Localização no Vault
+### Localização dos Manifestos
 - O script e seus arquivos de saída pertencem à **gestão de infraestrutura técnica**.
-- Salve os manifestos na pasta **`t.i/`** dentro do vault Obsidian (ver [Template do Manifesto](../templates/MANIFESTO_TEMPLATE.md)).
+- O orquestrador gera os manifestos em **`manifests/`** na raiz do projeto (ver [Template do Manifesto](../templates/MANIFESTO_TEMPLATE.md)).
+- ⚠️ `manifests/` é **ignorado pelo Git** (`.gitignore`) — manifestos reais contêm chaves OEM e dados de clientes e **nunca** devem ser commitados no repositório público.
+- Para alterar o destino, use o flag `--saida` do orquestrador (ex: apontar para uma pasta local do vault, se desejado).
 
 ### Estrutura do Manifesto (`templates/MANIFESTO_TEMPLATE.md`)
 1. **Cabeçalho** — cliente, data, técnico, hostname.
@@ -286,62 +288,37 @@ scripts/
 pip install paramiko
 ```
 
-### Esqueleto do orquestrador (`scripts/python/orquestrador.py`)
+### Orquestrador implementado (`scripts/python/orquestrador.py`)
 
-```python
-#!/usr/bin/env python3
-"""Orquestrador do Projeto Bancada — conecta via SSH e executa as 3 etapas."""
-import argparse, json, os, sys
-import paramiko
+O orquestrador está **implementado e funcional**. Fluxo executado por chamada:
 
-def conectar(host, usuario, chave_privada):
-    client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    client.connect(hostname=host, username=usuario, key_filename=chave_privada, timeout=10)
-    return client
-
-def executar_remoto(client, comando_powershell):
-    stdin, stdout, stderr = client.exec_command(comando_powershell)
-    saida = stdout.read().decode("utf-8", errors="replace")
-    erro = stderr.read().decode("utf-8", errors="replace")
-    codigo = stdout.channel.recv_exit_status()
-    return saida, erro, codigo
-
-def coletar_inventario(client):
-    # 1. Envia o bloco JSON de inventário (via SFTP: scripts/powershell/inventario.ps1)
-    # 2. Executa remoto, faz json.loads da saída e retorna dict
-    ...
-
-def executar_backup(client, destino):
-    # Executa backup-robocopy.ps1 e coleta |  por pasta
-    ...
-
-def gerar_manifesto(inventario, status_copias, cliente, data):
-    # Monta MANIFESTO_<CLIENTE>_<DATA>.md e salva em t.i/
-    ...
-
-def main():
-    parser = argparse.ArgumentParser(description="Projeto Bancada — orquestrador")
-    parser.add_argument("--host", required=True)
-    parser.add_argument("--usuario", required=True)
-    parser.add_argument("--chave", default=os.path.expanduser("~/.ssh/id_ed25519"))
-    parser.add_argument("--cliente", required=True)
-    parser.add_argument("--destino", help="UNC do storage central")
-    args = parser.parse_args()
-
-    client = conectar(args.host, args.usuario, args.chave)
-    try:
-        inventario = coletar_inventario(client)
-        status = executar_backup(client, args.destino) if args.destino else {}
-        gerar_manifesto(inventario, status, args.cliente, __import__("datetime").date.today().isoformat())
-    finally:
-        client.close()
-
-if __name__ == "__main__":
-    sys.exit(main())
+```text
+main() ──► conectar()                    (SSH via chave ed25519)
+   ├──► enviar_script(inventario.ps1)    (SFTP → C:\Windows\Temp\projeto-bancada\)
+   ├──► coletar_inventario()             (executa PS1 → json.loads → dict)
+   ├──► enviar_script(backup-robocopy.ps1)
+   ├──► executar_backup(destino)         (executa PS1 com -Destino → json.loads)
+   └──► gerar_manifesto()                (markdown → manifests/MANIFESTO_<cliente>_<data>.md)
 ```
 
-> ⚠️ **Validar antes de usar:** Este esqueleto é referência de arquitetura — as funções `coletar_inventario`, `executar_backup` e `gerar_manifesto` precisam da implementação completa (com SFTP dos `.ps1`, parse de saída e template de manifesto) antes de ir para produção.
+**Destaques da implementação:**
+- 🔌 `conectar` — sessão SSH com `AutoAddPolicy` e timeout de 10s.
+- 📤 `enviar_script` — upload via **SFTP** com criação automática de diretório remoto.
+- 📊 `parse_json_saida` — converte JSON do PowerShell com diagnóstico de erro (imprime amostra da saída bruta).
+- 🧩 `coletar_inventario` / `executar_backup` — executam os `.ps1` e retornam estruturas Python.
+- 📝 `gerar_manifesto` — monta o Markdown final a partir dos dados (tabelas + checklist de reinstalação).
+- 🚦 `main` — CLI com `--host`, `--usuario`, `--chave`, `--cliente`, `--destino` (opcional — pula backup se ausente) e `--saida` (destino alternativo do manifesto).
+
+### Flags da CLI
+
+| Flag | Obrigatório | Descrição |
+| :--- | :--- | :--- |
+| `--host` | ✅ | IP/hostname da máquina alvo |
+| `--usuario` | ✅ | Usuário da máquina alvo |
+| `--chave` | opt | Chave privada (padrão `~/.ssh/id_ed25519`) |
+| `--cliente` | ✅ | Nome do cliente para o manifesto |
+| `--destino` | opt | UNC do storage (se ausente, pula backup) |
+| `--saida` | opt | Caminho alternativo do manifesto |
 
 ---
 
@@ -370,7 +347,7 @@ fi
 | Comando não encontrado (`powershell.exe`) | PATH incompleto no sshd | Usar caminho completo `C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe` |
 
 ### Validação pós-operação
-- ✅ Conferir existência do arquivo de manifesto: `ls -la t.i/MANIFESTO_*.md`
+- ✅ Conferir existência do arquivo de manifesto: `ls -la manifests/MANIFESTO_*.md`
 - ✅ Conferir exit codes do robocopy: `$code -ge 8` → marcar falha
 - ✅ Conferir que a chave OEM não está vazia; se vazia, marcar observação
 
@@ -409,7 +386,7 @@ python3 scripts/python/orquestrador.py \
   --destino '\\storage-central\Bancada\TECNOSOFT'
 
 # 3. Resultado esperado
-#    - Manifesto: t.i/MANIFESTO_TECNOSOFT_2026-09-11.md
+#    - Manifesto: manifests/MANIFESTO_TECNOSOFT_2026-09-11.md
 #    - Backup:    \\storage-central\Bancada\TECNOSOFT\<usuarios>\...
 #    - Logs:      logs/ (locais)
 ```
