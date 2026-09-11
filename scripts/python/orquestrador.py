@@ -15,6 +15,7 @@ import argparse
 import datetime
 import json
 import os
+import posixpath
 import sys
 
 import paramiko
@@ -69,12 +70,18 @@ def enviar_script(client, origem_local, destino_remoto):
 
     sftp = client.open_sftp()
     try:
-        # Cria diretório remoto (se não existir)
+        # Separa diretório e arquivo: o mkdir ocorre no DIRETÓRIO, não no arquivo.
+        dir_remoto = posixpath.dirname(destino_remoto)
+        # Garante caminho com barras normais (sftp do Windows aceita 'C:/...')
+        dir_remoto = dir_remoto.replace("\\", "/")
         try:
-            sftp.stat(destino_remoto)
+            sftp.stat(dir_remoto)
         except FileNotFoundError:
-            sftp.mkdir(destino_remoto)
-        sftp.put(origem_local, destino_remoto)
+            sftp.mkdir(dir_remoto)
+            print(f"✔ Diretório remoto criado: {dir_remoto}")
+        # Envia para o caminho no formato aceito pelo sftp-server do Windows
+        destino_envio = destino_remoto.replace("\\", "/")
+        sftp.put(origem_local, destino_envio)
         print(f"✔ Script enviado: {os.path.basename(origem_local)}")
         return True
     except Exception as e:
