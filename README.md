@@ -75,17 +75,39 @@ projeto-bancada/
 │       └── orquestrador.py       <-- Orquestrador completo (SFTP + JSON + manifesto)
 ├── templates/
 │   └── MANIFESTO_TEMPLATE.md     <-- Modelo do manifesto Obsidian (Etapa 3)
+├── tests/
+│   └── test_orquestrador.py      <-- 🧪 Testes das funções puras (pytest)
 ├── manifests/                    <-- Manifestos REAIS (ignorados pelo Git 🛡️)
+├── requirements.txt              <-- Dependências de runtime (paramiko)
+├── requirements-dev.txt          <-- Dependências de testes (pytest)
 ├── README.md
 └── .gitignore
 ```
 
 ## 🔧 Requisitos
 
-- Python 3 + `paramiko`
-- GitHub CLI (`gh`) — opcional, para automações do repositório
+- Python 3.10+
 - Máquina alvo Windows com **OpenSSH Server** habilitado (guia acima)
 - Chave SSH `ed25519` configurada na máquina alvo
+
+## 🛠️ Setup do ambiente (Linux)
+
+```bash
+cd ~/projetos/projeto-bancada
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt        # runtime (paramiko)
+# pip install -r requirements-dev.txt  # + testes (pytest)
+```
+
+> 💡 Em máquina nova: basta repetir os comandos acima — os `requirements.txt` garantem um ambiente idêntico, sem depender do Python do sistema.
+
+## 🧪 Testes
+
+```bash
+source .venv/bin/activate
+pytest tests/ -v
+```
 
 ## ⚡ Uso Rápido
 

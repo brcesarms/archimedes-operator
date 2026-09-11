@@ -1,0 +1,3 @@
+# Dependências de runtime do orquestrador (Projeto Bancada)
+# Instalar: python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt
+paramiko>=5.0.0
