@@ -36,11 +36,24 @@ Write-Host "✔ Servico sshd em execucao e configurado para inicializacao automa
 
 # 3. Regra de Firewall
 Write-Host "`n🛡️ [3/4] Verificando regra de Firewall..." -ForegroundColor Cyan
-if (-not (Get-NetFirewallRule -Name "OpenSSH-Server-In-TCP" -ErrorAction SilentlyContinue)) {
-    New-NetFirewallRule -Name 'OpenSSH-Server-In-TCP' -DisplayName 'OpenSSH Server (sshd)' -Enabled True -Direction Inbound -Protocol TCP -Action Allow -LocalPort 22 | Out-Null
-    Write-Host "✔ Regra de Firewall criada para a porta 22!" -ForegroundColor Green
+$regraExiste = Get-NetFirewallRule -Name "OpenSSH-Server-In-TCP" -ErrorAction SilentlyContinue
+if (-not $regraExiste) {
+    # Cria a regra cobrindo TODOS os perfis (inclusive Publico — onde o Windows bloqueia tudo por padrao)
+    New-NetFirewallRule -Name 'OpenSSH-Server-In-TCP' -DisplayName 'OpenSSH Server (sshd)' `
+        -Enabled True -Direction Inbound -Protocol TCP -Action Allow -LocalPort 22 -Profile Any | Out-Null
+    Write-Host "✔ Regra de Firewall criada para a porta 22 (todos os perfis)!" -ForegroundColor Green
 } else {
     Write-Host "✔ Regra de Firewall para porta 22 ja existe!" -ForegroundColor Green
+}
+
+# Validacao extra: confirmar que o firewall realmente permite (fallback netsh se o cmdlet falhar silenciosamente)
+$validaRegra = netsh advfirewall firewall show rule name="OpenSSH-Server-In-TCP" 2>$null
+if ($validaRegra -notmatch "OpenSSH-Server-In-TCP") {
+    Write-Host "⚠️ Regra nao detectada via netsh — criando com fallback..." -ForegroundColor Yellow
+    netsh advfirewall firewall add rule name="OpenSSH-Server-In-TCP" dir=in action=allow protocol=TCP localport=22 | Out-Null
+    Write-Host "✔ Regra criada com fallback netsh!" -ForegroundColor Green
+} else {
+    Write-Host "✔ Validacao netsh: regra em vigor!" -ForegroundColor Green
 }
 
 # 4. Autorizar chave SSH do Bruno
@@ -79,6 +92,15 @@ $ips = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object {
     $_.InterfaceAlias -notlike "*vEthernet*" -and 
     $_.IPAddress -notlike "169.254*" 
 }).IPAddress
+
+# 6. Teste local: confirmar que a porta 22 esta aceitando conexao
+Write-Host "`n🔬 [5/5] Teste local da porta 22..." -ForegroundColor Cyan
+$testePorta = Test-NetConnection -ComputerName "127.0.0.1" -Port 22 -WarningAction SilentlyContinue
+if ($testePorta.TcpTestSucceeded) {
+    Write-Host "✔ Porta 22 aceitando conexao localmente! SSH pronto!" -ForegroundColor Green
+} else {
+    Write-Host "⚠️ Porta 22 nao respondeu localmente — verifique firewall/servico." -ForegroundColor Yellow
+}
 
 Write-Host "`n========================================================" -ForegroundColor Cyan
 Write-Host "🎉 Tudo pronto! SSH ativo e configurado com sucesso! ✅" -ForegroundColor Green

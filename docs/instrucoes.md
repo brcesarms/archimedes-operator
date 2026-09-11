@@ -68,6 +68,44 @@ Executar de forma **automatizada e não-interativa** o processo de:
 - Conectar à máquina alvo via SSH usando **client Python `paramiko`** ou cliente nativo OpenSSH.
 - O Windows 10/11 moderno já inclui o **OpenSSH Server** opcional; verifique/instale na máquina alvo (via GUI: *Configurações → Aplicativos → Recursos Opcionais → OpenSSH Server*).
 
+### 🧪 Caso Real (2026-09-11) — VM Windows 11 no Proxmox
+
+> **Contexto:** a máquina alvo era uma **VM Windows 11** (VMID 101) rodando no Proxmox do GEEKOM (host `10.0.0.3`). O script `setup-ssh-pri.ps1` rodou e o serviço `sshd` estava **RUNNING**, mas a porta 22 **não respondia de nenhum lugar** (nem do próprio host Proxmox).
+
+**Sintomas observados:**
+- `ping` na VM → falha (ICMP bloqueado, normal)
+- Portas 22, 445, 3389 → todas filtradas
+- MAC da VM = prefixo `BC:24:11` (Proxmox) → confirmou que era VM
+- `qm guest exec` inicialmente falhou (`QEMU guest agent is not running`)
+
+**🔬 Diagnóstico remoto (via host Proxmox + guest agent):**
+```bash
+# No host Proxmox — testar porta direto pela bridge (elimina roteamento)
+timeout 4 bash -c 'cat < /dev/null > /dev/tcp/10.0.0.217/22'
+
+# Quando o QEMU Guest Agent estiver ativo (após instalar guest tools na VM):
+qm guest exec 101 -- cmd /c "sc query sshd"                # serviço
+qm guest exec 101 -- cmd /c "netstat -an | findstr :22"    # porta
+qm guest exec 101 -- powershell -Command "Get-NetConnectionProfile | Select Name, NetworkCategory"
+```
+
+**🎯 Causa raiz (3 camadas — diagnóstico em cascata):**
+1. **Firewall do Proxmox:** estava **DESABILITADO** (`Status: disabled/running`, sem `/etc/pve/firewall/cluster.fw`) → **não era o bloqueio** (a interface tinha `firewall=1`, mas sem config global não filtra).
+2. **Serviço `sshd`:** **RUNNING** e porta **LISTENING** (`0.0.0.0:22`) → não era problema.
+3. **Firewall do Windows:** 🔥 **O VILÃO** — o perfil de rede era **`Public`** e a regra `OpenSSH-Server-In-TCP` **NÃO EXISTIA** no Windows Firewall (o `New-NetFirewallRule` do script não tinha criado/validado). Com perfil **Público**, o Windows **bloqueia toda entrada** sem regra explícita.
+
+**✅ Correção aplicada (criar a regra no Windows via guest agent):**
+```bash
+# No host Proxmox (com guest agent ativo):
+qm guest exec 101 -- netsh advfirewall firewall add rule name="OpenSSH-Server-In-TCP" dir=in action=allow protocol=TCP localport=22
+```
+Após isso, a conexão `ssh brces@10.0.0.217` **funcionou imediatamente**.
+
+**💡 Lições documentadas para o projeto:**
+- O script `setup-ssh-pri.ps1` foi **aprimorado** com: `-Profile Any` explícito na regra + **validação via `netsh`** + fallback (`netsh advfirewall firewall add rule`) + **teste local da porta 22** (`Test-NetConnection 127.0.0.1`).
+- **Instale o QEMU Guest Agent em VMs Windows** (ISO `virtio-win` → `virtio-win-guest-tools.exe`) — permite diagnóstico/inventário via `qm guest exec` sem depender de SSH/console.
+- Em notebook físico, o diagnóstico é o mesmo: verificar **perfil de rede** (`Get-NetConnectionProfile`), **regra no firewall do Windows** (`netsh advfirewall firewall show rule name="OpenSSH-Server-In-TCP"`) e **serviço** (`sc query sshd`).
+
 ### Autenticação
 **Padrão recomendado (chave pública):**
 ```bash

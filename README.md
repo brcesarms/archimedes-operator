@@ -14,6 +14,20 @@ Automação executada via **OpenCode CLI** para o fluxo de bancada do T.I. — c
 >
 > 💡 Baixe direto o script: [`setup-ssh-pri.ps1`](./scripts/powershell/setup-ssh-pri.ps1)
 
+### 🧪 Ambiente testado: VM Windows 11 no Proxmox
+
+✅ **[2026-09-11]** SSH configurado e testado com sucesso numa **VM Windows 11** (VMID 101) no Proxmox do GEEKOM (host `10.0.0.3`, IP da VM `10.0.0.217`).
+
+**Resumo da solução de problema (vitória registrada):**
+- O serviço `sshd` estava ativo e a porta **LISTENING**, mas a rede era **`Public`** e a regra `OpenSSH-Server-In-TCP` **faltava** no firewall do Windows → bloqueio de entrada.
+- Correção (via guest agent do Proxmox):
+  ```
+  netsh advfirewall firewall add rule name="OpenSSH-Server-In-TCP" dir=in action=allow protocol=TCP localport=22
+  ```
+- Conexão `ssh brces@10.0.0.217` funcionou imediatamente. 🎉
+
+> 📖 [Detalhes completos do diagnóstico](./docs/instrucoes.md) (seção "Caso Real")
+
 ---
 
 ## 🚀 Comandos rápidos — copiar e colar na máquina Windows
