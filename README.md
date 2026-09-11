@@ -6,21 +6,33 @@ Automação executada via **OpenCode CLI** para o fluxo de bancada do T.I. — c
 
 ---
 
+## 🪟 Preparando uma máquina Windows 11
+
+> **Está na máquina Windows e quer habilitar o acesso SSH?** Siga o guia:
+>
+> 📖 **[Passo a passo — Preparar Máquina Windows 11](./docs/preparar-maquina-windows.md)**
+>
+> 💡 Baixe direto o script: [`setup-ssh-pri.ps1`](./scripts/powershell/setup-ssh-pri.ps1)
+
+---
+
 ## 📁 Estrutura do Repositório
 
 ```text
 projeto-bancada/
 ├── docs/
-│   └── instrucoes.md          <-- Documento técnico completo (refatorado)
+│   ├── instrucoes.md             <-- Documento técnico completo (refatorado)
+│   └── preparar-maquina-windows.md <-- 🪟 Guia passo a passo (Windows 11)
 ├── scripts/
 │   ├── powershell/
-│   │   ├── inventario.ps1     <-- Inventário JSON (Etapa 1)
-│   │   └── backup-robocopy.ps1 <-- Backup por usuário (Etapa 2)
+│   │   ├── setup-ssh-pri.ps1     <-- Configura OpenSSH Server (rodar na máq. Windows)
+│   │   ├── inventario.ps1        <-- Inventário JSON (Etapa 1)
+│   │   └── backup-robocopy.ps1   <-- Backup por usuário (Etapa 2)
 │   └── python/
-│       └── orquestrador.py    <-- Orquestrador completo (SFTP + JSON + manifesto)
+│       └── orquestrador.py       <-- Orquestrador completo (SFTP + JSON + manifesto)
 ├── templates/
-│   └── MANIFESTO_TEMPLATE.md  <-- Modelo do manifesto Obsidian (Etapa 3)
-├── manifests/                 <-- Manifestos REAIS (ignorados pelo Git 🛡️)
+│   └── MANIFESTO_TEMPLATE.md     <-- Modelo do manifesto Obsidian (Etapa 3)
+├── manifests/                    <-- Manifestos REAIS (ignorados pelo Git 🛡️)
 ├── README.md
 └── .gitignore
 ```
@@ -29,7 +41,7 @@ projeto-bancada/
 
 - Python 3 + `paramiko`
 - GitHub CLI (`gh`) — opcional, para automações do repositório
-- Máquina alvo Windows com **OpenSSH Server** habilitado
+- Máquina alvo Windows com **OpenSSH Server** habilitado (guia acima)
 - Chave SSH `ed25519` configurada na máquina alvo
 
 ## ⚡ Uso Rápido
