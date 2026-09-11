@@ -120,6 +120,14 @@ python3 scripts/python/orquestrador.py \
   --destino '\\storage-central\Bancada\TECNOSOFT'
 ```
 
+## 🍽️ Menu Interativo (Painel de Operações)
+
+Para operar de forma guiada com a tela inicial explicativa:
+
+```bash
+python3 scripts/python/menu.py
+```
+
 > 📖 Detalhes completos em [docs/instrucoes.md](./docs/instrucoes.md)
 
 ## 🧹 Desbloat Windows 11 (pós-formatação, opcional)

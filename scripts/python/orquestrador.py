@@ -308,6 +308,31 @@ def executar_pos_instalacao(client, modo="completa"):
     return log_remoto
 
 
+def executar_debloat(client, switches="-RunDefaultsLite -Silent"):
+    """Envia Win11Debloat.ps1 e executa remotamente de forma silenciosa.
+
+    Redireciona saída para log remoto. Retorna caminho do log ou None em falha.
+    """
+    script_local = os.path.join(SCRIPTS_PS_DIR, "Win11Debloat.ps1")
+    script_remoto = f"{REMOTE_SCRIPT_DIR}\\Win11Debloat.ps1"
+
+    if not enviar_script(client, script_local, script_remoto):
+        return None
+
+    log_remoto = f"{REMOTE_SCRIPT_DIR}\\debloat.log"
+    comando = (
+        f'{PS_PREFIX} -Command "& \'{script_remoto}\' {switches} *> \'{log_remoto}\'"'
+    )
+    saida, erro, codigo = executar_remoto(client, comando)
+
+    if codigo != 0:
+        print(f"✖ Desbloat falhou (exit {codigo}). Erro: {erro}")
+        return None
+
+    print(f"✔ Desbloat concluído — log remoto: {log_remoto}")
+    return log_remoto
+
+
 def main():
     parser = argparse.ArgumentParser(description="Projeto Bancada — orquestrador")
     parser.add_argument("--host", required=True, help="IP/hostname da máquina alvo")

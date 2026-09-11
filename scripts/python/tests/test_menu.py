@@ -67,3 +67,15 @@ def test_modo_pos_invalido():
         assert False, "deveria levantar ValueError"
     except ValueError as e:
         assert "inválido" in str(e)
+
+
+def test_parse_etapas_debloat():
+    assert menu.parse_etapas("5") == [5]
+    assert menu.parse_etapas("1,5") == [1, 5]
+
+
+def test_render_painel_contem_todas_etapas():
+    painel = menu.render_painel()
+    for num in [1, 2, 3, 4, 5]:
+        assert f"[{num}]" in painel
+    assert "PROJETO BANCADA" in painel

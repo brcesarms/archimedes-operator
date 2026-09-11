@@ -17,10 +17,26 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import orquestrador as bd  # noqa: E402
 
 ETAPAS = {
-    1: "📊 Inventário",
-    2: "💾 Backup (robocopy)",
-    3: "📋 Manifesto",
-    4: "🧹 Pós-instalação (instalar programas)",
+    1: (
+        "📊 Inventário Técnico",
+        "Mapeia perfis em C:\\Users, softwares instalados e extrai a chave OEM da BIOS.",
+    ),
+    2: (
+        "💾 Backup Forense (Robocopy)",
+        "Copia Desktop, Documentos, Downloads e Fotos para o storage central (com suporte a OneDrive).",
+    ),
+    3: (
+        "📋 Manifesto Markdown",
+        "Gera o checklist para o Obsidian com status de cópia e lista de apps a reinstalar.",
+    ),
+    4: (
+        "🪟 Pós-Instalação Completo",
+        "Aplica ajustes de energia/privacidade e instala 10 apps essenciais + 19 runtimes via winget.",
+    ),
+    5: (
+        "🧹 Desbloat Windows 11 (Opcional pós-formatação)",
+        "Remove bloatware, telemetria e widgets usando o Win11Debloat com ponto de restauração.",
+    ),
 }
 
 MODOS_POS = {
@@ -33,8 +49,29 @@ MODOS_POS = {
 DEFAULT_ETAPAS = "1,2,3"
 
 
+def render_painel():
+    """Gera a string do painel de operações com opções e descrições."""
+    linhas = [
+        "=" * 66,
+        "🏛️ PROJETO BANCADA — PAINEL DE OPERAÇÕES",
+        "=" * 66,
+        "",
+        "Etapas disponíveis:",
+    ]
+    for num, (titulo, desc) in ETAPAS.items():
+        linhas.append(f"\n  [{num}] {titulo}")
+        linhas.append(f"      └── {desc}")
+    linhas.append("\n" + "=" * 66)
+    return "\n".join(linhas)
+
+
+def exibir_painel_inicial():
+    """Exibe o painel de boas-vindas com todas as etapas e descrições."""
+    print(render_painel())
+
+
 def parse_etapas(entrada, default=DEFAULT_ETAPAS):
-    """Normaliza a escolha de etapas para lista ordenada de inteiros [1..4].
+    """Normaliza a escolha de etapas para lista ordenada de inteiros [1..5].
 
     - vazio/"tudo"/"T"/"*" → default
     - "3,1" → [1, 3] (ordena e remove duplicados)
@@ -48,7 +85,7 @@ def parse_etapas(entrada, default=DEFAULT_ETAPAS):
         parte = parte.strip()
         if parte.isdigit():
             n = int(parte)
-            if 1 <= n <= 4:
+            if 1 <= n <= 5:
                 numeros.append(n)
     if not numeros:
         return sorted({int(p) for p in default.split(",")})
@@ -83,35 +120,44 @@ def escolher_modo_pos():
 
 
 def executar():
-    print("=" * 62)
-    print("🌐 MENU — Projeto Bancada")
-    print("=" * 62)
+    exibir_painel_inicial()
 
-    host = perguntar("Host", "10.0.0.217")
-    usuario = perguntar("Usuário", "brces")
-    chave = perguntar("Chave SSH", os.path.expanduser("~/.ssh/id_ed25519"))
-    cliente = perguntar("Cliente")
-    if not cliente:
-        print("✖ Cliente é obrigatório.")
-        return 1
-    destino = perguntar("Destino backup (vazio = pula)")
-
-    print("\nEtapas disponíveis:")
-    for num, desc in ETAPAS.items():
-        print(f"  {num}. {desc}")
-    escolha = input(f"Escolha (ex: 1,2,3,4 — Enter = {DEFAULT_ETAPAS}): ").strip()
+    escolha = input(
+        f"\nEscolha as etapas (ex: 1,2,3,4,5 — Enter = {DEFAULT_ETAPAS}): "
+    ).strip()
     etapas = expandir_etapas(parse_etapas(escolha))
 
     modo_pos = None
     if 4 in etapas:
         modo_pos = escolher_modo_pos()
 
-    if 2 in etapas and not destino:
-        print("\n⚠ Destino vazio — etapa de backup será pulada.")
-        etapas = [e for e in etapas if e != 2]
-
     if not etapas:
         print("✖ Nenhuma etapa para executar.")
+        return 1
+
+    print("\n--- 🔌 Configuração da Conexão ---")
+    host = perguntar("Host", "10.0.0.217")
+    usuario = perguntar("Usuário", "brces")
+    chave = perguntar("Chave SSH", os.path.expanduser("~/.ssh/id_ed25519"))
+
+    cliente = ""
+    if 3 in etapas or 2 in etapas:
+        cliente = perguntar("Cliente")
+        if not cliente:
+            print("✖ Cliente é obrigatório para manifesto/backup.")
+            return 1
+    else:
+        cliente = perguntar("Cliente (opcional)", "BANCADA")
+
+    destino = ""
+    if 2 in etapas:
+        destino = perguntar("Destino backup (vazio = pula)")
+        if not destino:
+            print("\n⚠ Destino vazio — etapa de backup será pulada.")
+            etapas = [e for e in etapas if e != 2]
+
+    if not etapas:
+        print("✖ Nenhuma etapa restante para executar.")
         return 1
 
     data = datetime.date.today().isoformat()
@@ -123,6 +169,7 @@ def executar():
         status = {}
         manifesto = None
         log_pos = None
+        log_debloat = None
 
         for etapa in etapas:
             if etapa == 1:
@@ -146,13 +193,19 @@ def executar():
                 log_pos = bd.executar_pos_instalacao(client, modo_pos)
                 if log_pos is None:
                     print("⚠ Pós-instalação falhou (sem log).")
+            elif etapa == 5:
+                log_debloat = bd.executar_debloat(client)
+                if log_debloat is None:
+                    print("⚠ Desbloat falhou (sem log).")
 
         print("\n🎯 Resumo:")
         print(f"  ✅ Etapas executadas: {', '.join(str(e) for e in etapas)}")
         if manifesto:
             print(f"  📄 Manifesto: {manifesto}")
         if log_pos:
-            print(f"  🧹 Log pós-instalação: {log_pos}")
+            print(f"  🪟 Log pós-instalação: {log_pos}")
+        if log_debloat:
+            print(f"  🧹 Log debloat: {log_debloat}")
         return 0
     finally:
         client.close()
