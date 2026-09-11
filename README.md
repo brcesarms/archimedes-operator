@@ -67,6 +67,7 @@ projeto-bancada/
 ├── scripts/
 │   ├── powershell/
 │   │   ├── setup-ssh-pri.ps1     <-- Configura OpenSSH Server (rodar na máq. Windows)
+│   │   ├── pos-instalacao.ps1    <-- 🪟 Pós-instalação: ajustes + apps + runtimes (rodar 1ª vez)
 │   │   ├── inventario.ps1        <-- Inventário JSON (Etapa 1)
 │   │   ├── backup-robocopy.ps1   <-- Backup por usuário (Etapa 2)
 │   │   └── Win11Debloat.ps1      <-- 🧹 Remove bloatware/telemetria (pós-formatação, opcional)
@@ -111,6 +112,29 @@ Após reinstalar o Windows, use o **Win11Debloat** para remover bloatware, telem
 > ⚠️ **Requisitos:** Windows PowerShell 5.1 (não o 7/pwsh) + **Administrador** + **Ponto de Restauração** recomendado.
 > 📖 Opções completas em [docs/instrucoes.md](./docs/instrucoes.md) (seção Desbloat).
 > 🔗 Projeto original: [Raphire/Win11Debloat](https://github.com/Raphire/Win11Debloat) (MIT).
+
+## 🪟 Pós-instalação (ajustes + softwares essenciais)
+
+Para máquinas novas / recém-formatadas, rode o **pos-instalacao.ps1** — aplica ajustes de sistema (energia, tema escuro, privacidade) e instala apps + runtimes via winget:
+
+```powershell
+# Na máquina Windows (PowerShell 5.1 como Administrador):
+Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
+.\scripts\powershell\pos-instalacao.ps1
+```
+
+| Etapa | O que faz |
+| :--- | :--- |
+| 1 | Libera ExecutionPolicy (Unrestricted) |
+| 2 | Desativa energia: vídeo, standby e hibernação (AC/DC) |
+| 3 | Ativa tema escuro (apps + sistema) |
+| 4 | Desativa Histórico de Atividades |
+| 5 | Desativa aplicativos em segundo plano |
+| 6 | Instala 10 apps essenciais (Terminal, Firefox, Chrome, 7-Zip, VLC...) |
+| 7 | Instala 19 runtimes (.NET Framework + .NET 5-8 + VC++ 2005-2015+ + Java) |
+
+> ⚙️ Pode pular partes com `-SkipApps` ou `-SkipRuntimes`.
+> 📖 Detalhes completos em [docs/instrucoes.md](./docs/instrucoes.md) (seção Pós-instalação).
 
 ## 🛡️ Segurança
 

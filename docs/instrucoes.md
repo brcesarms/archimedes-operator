@@ -14,11 +14,12 @@
 4. [Etapa 2 — Backup com Robocopy](#-etapa-2--backup-com-robocopy)
 5. [Etapa 3 — Geração do Manifesto](#-etapa-3--geração-do-manifesto)
 6. [Etapa 4 — Desbloat Windows 11](#-etapa-4--desbloat-windows-11-pós-formatação-opcional)
-7. [Orquestração em Python](#-orquestração-em-python)
-8. [Tratamento de Erros e Validação](#-tratamento-de-erros-e-validação)
-9. [Segurança e Boas Práticas](#-segurança-e-boas-práticas)
-10. [Fluxo de Execução Completo](#-fluxo-de-execução-completo)
-11. [🔗 Fontes](#-fontes)
+7. [Etapa 5 — Pós-instalação](#-etapa-5--pós-instalação-ajustes--softwares-essenciais)
+8. [Orquestração em Python](#-orquestração-em-python)
+9. [Tratamento de Erros e Validação](#-tratamento-de-erros-e-validação)
+10. [Segurança e Boas Práticas](#-segurança-e-boas-práticas)
+11. [Fluxo de Execução Completo](#-fluxo-de-execução-completo)
+12. [🔗 Fontes](#-fontes)
 
 ---
 
@@ -351,6 +352,63 @@ Após reinstalar o Windows e restaurar o backup, o **Win11Debloat** remove bloat
 | `-TaskbarAlignLeft` | Alinha barra de tarefas à esquerda |
 
 > ⚠️ **Boas Práticas:** rodar SEMPRE com ponto de restauração; em máquinas de cliente, preferir `-RunDefaultsLite` (não remove apps) + configurar o restante conforme pedido; `-ForceRemoveEdge` apenas com autorização explícita.
+
+---
+
+## 🪟 Etapa 5 — Pós-instalação (ajustes + softwares essenciais)
+
+Para máquinas **novas ou recém-formatadas**, o script `scripts/powershell/pos-instalacao.ps1` aplica ajustes de sistema e instala os aplicativos + runtimes essenciais da bancada num único comando. É a última etapa antes de entregar a máquina ao cliente.
+
+> 🧠 **Cenário da bancada:** a ordem ideal é **Etapa 4 (Desbloat) → Etapa 5 (Pós-instalação)** — primeiro remove o que não serve, depois instala o que é essencial. A **Etapa 3 (Manifesto)** já registrou os softwares detectados no checklist de reinstalação; o `pos-instalacao.ps1` cobre a instalação em lote.
+
+### O que o script faz
+
+| Etapa | Ação | Detalhes |
+| :--- | :--- | :--- |
+| 1 | 🔓 ExecutionPolicy | `Unrestricted` em `LocalMachine` (para scripts da bancada) |
+| 2 | 🔌 Energia | `VIDEOIDLE`, `STANDBYIDLE` e `HIBERNATEIDLE` = 0 (AC e DC) via `powercfg` |
+| 3 | 🌙 Tema escuro | `AppsUseLightTheme` + `SystemUsesLightTheme` = 0 |
+| 4 | 🕵️ Histórico de Atividades | `Start_TrackDocs` = 0 |
+| 5 | 📵 Background apps | `GlobalUserDisabled` = 1 |
+| 6 | 🧩 Apps essenciais | 10 apps via winget |
+| 7 | ⚙️ Runtimes | 19 pacotes via winget |
+
+### Aplicativos instalados (Etapa 6)
+
+| Categoria | Pacotes |
+| :--- | :--- |
+| Terminal | `Microsoft.PowerShell`, `Microsoft.WindowsTerminal` |
+| Utilidades | `7zip.7zip`, `Skillbrains.Lightshot` |
+| Navegador | `Mozilla.Firefox`, `Google.Chrome` |
+| Documentos | `Foxit.FoxitReader`, `TheDocumentFoundation.LibreOffice.LTS` |
+| Remoto | `RustDesk.RustDesk` |
+| Multimídia | `VideoLAN.VLC` |
+
+### Runtimes instalados (Etapa 7)
+
+| Categoria | Pacotes |
+| :--- | :--- |
+| .NET Framework | `Microsoft.DotNet.Framework.DeveloperPack_4`, `Microsoft.DotNet.Framework.DeveloperPack.4.5` |
+| .NET Runtime | `5`, `6`, `7`, `8` |
+| VC++ Redist | `2005`, `2008`, `2010`, `2012`, `2013`, `2015+` (x86 + x64) |
+| Java | `Oracle.JavaRuntimeEnvironment` |
+
+### Como usar (na máquina, PowerShell 5.1 como Admin)
+
+```powershell
+# Rodar tudo (recomendado):
+.\scripts\powershell\pos-instalacao.ps1
+
+# Pular apps ou runtimes:
+.\scripts\powershell\pos-instalacao.ps1 -SkipApps
+.\scripts\powershell\pos-instalacao.ps1 -SkipRuntimes
+```
+
+### Comportamento
+
+- ✅ **Tolerante a falhas:** cada `winget install` roda isolado; se um pacote falhar, o script continua e reporta no resumo final.
+- 📊 **Resumo final:** ao término lista `$Erros.Count` falhas (se houver) e sugere `winget upgrade --all`.
+- 🔄 **Reinício:** o visual (tema escuro) aplica após reiniciar.
 
 ---
 
