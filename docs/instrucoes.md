@@ -380,8 +380,8 @@ Para máquinas **novas ou recém-formatadas**, o script `scripts/powershell/pos-
 | Terminal | `Microsoft.PowerShell`, `Microsoft.WindowsTerminal` |
 | Utilidades | `7zip.7zip`, `Skillbrains.Lightshot` |
 | Navegador | `Mozilla.Firefox`, `Google.Chrome` |
-| Documentos | `Foxit.FoxitReader`, `TheDocumentFoundation.LibreOffice.LTS` |
-| Remoto | `RustDesk.RustDesk` |
+| Documentos | `Foxit.FoxitReader`, `TheDocumentFoundation.LibreOffice` |
+| Remoto | `Install-RustDesk` (fallback manual — sem pacote no winget) |
 | Multimídia | `VideoLAN.VLC` |
 
 ### Runtimes instalados (Etapa 7)
@@ -409,6 +409,8 @@ Para máquinas **novas ou recém-formatadas**, o script `scripts/powershell/pos-
 - ✅ **Tolerante a falhas:** cada `winget install` roda isolado; se um pacote falhar, o script continua e reporta no resumo final.
 - 📊 **Resumo final:** ao término lista `$Erros.Count` falhas (se houver) e sugere `winget upgrade --all`.
 - 🔄 **Reinício:** o visual (tema escuro) aplica após reiniciar.
+- 📦 **RustDesk:** não existe mais pacote no winget (removido da community). O script baixa o último release **x86_64 do GitHub oficial** e instala com `--silent-install`.
+- ⚠️ **BOM duplicado:** o PowerShell 5.1 quebra (`ParserError`) se o `.ps1` tiver BOM UTF-8 duplicado. Arquivos do repositório devem ter **BOM único + CRLF**.
 
 ---
 

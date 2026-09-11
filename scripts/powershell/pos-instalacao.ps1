@@ -1,4 +1,4 @@
-﻿﻿#Requires -RunAsAdministrator
+﻿#Requires -RunAsAdministrator
 <#
 .SYNOPSIS
     Pos-instalacao do Windows — ajustes de sistema + softwares essenciais (bancada).
@@ -124,6 +124,26 @@ function Install-WinGetApp {
     }
 }
 
+# Helper — RustDesk não possui pacote no winget (removido da community).
+# Fallback: baixa o último release x86_64 do GitHub oficial e instala silenciosamente.
+function Install-RustDesk {
+    Write-Host "  📦 [Remoto] Instalando RustDesk (GitHub release)..." -ForegroundColor Yellow
+    try {
+        $release = Invoke-RestMethod -Uri "https://api.github.com/repos/rustdesk/rustdesk/releases/latest" -Headers @{ "User-Agent" = "archimedes-bancada" }
+        $asset = $release.assets | Where-Object { $_.name -match "x86_64.*\.exe$" } | Select-Object -First 1
+        if (-not $asset) {
+            throw "Asset x86_64 nao encontrado no release $($release.tag_name)"
+        }
+        $exe = "$env:TEMP\rustdesk-$($release.tag_name)-x86_64.exe"
+        Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $exe
+        Start-Process -FilePath $exe -ArgumentList "--silent-install" -Wait
+        Write-Host "  ✔ RustDesk $($release.tag_name) instalado com sucesso!" -ForegroundColor Green
+    } catch {
+        Write-Host "  ✖ Falha ao instalar RustDesk: $($_.Exception.Message)" -ForegroundColor Red
+        $script:Erros += "RustDesk (manual)"
+    }
+}
+
 # ---------------------------------------------------------------
 # Etapa 6 — Aplicativos essenciais
 # ---------------------------------------------------------------
@@ -135,9 +155,9 @@ if (-not $SkipApps) {
     Install-WinGetApp -ID "Mozilla.Firefox"             -Categoria "Navegador"
     Install-WinGetApp -ID "Foxit.FoxitReader"           -Categoria "Documentos"
     Install-WinGetApp -ID "Google.Chrome"               -Categoria "Navegador"
-    Install-WinGetApp -ID "TheDocumentFoundation.LibreOffice.LTS" -Categoria "Documentos"
+    Install-WinGetApp -ID "TheDocumentFoundation.LibreOffice" -Categoria "Documentos"
     Install-WinGetApp -ID "Skillbrains.Lightshot"       -Categoria "Utilidades"
-    Install-WinGetApp -ID "RustDesk.RustDesk"           -Categoria "Remoto"
+    Install-RustDesk
     Install-WinGetApp -ID "VideoLAN.VLC"                -Categoria "Multimidia"
 } else {
     Write-Host "`n⏭️  [6/7] Instalacao de aplicativos pulada (-SkipApps)." -ForegroundColor DarkGray
