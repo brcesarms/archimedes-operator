@@ -16,6 +16,33 @@ Automação executada via **OpenCode CLI** para o fluxo de bancada do T.I. — c
 
 ---
 
+## 🚀 Comandos rápidos — copiar e colar na máquina Windows
+
+> **Passo 1** — No **Windows PowerShell** (pode ser janela normal), baixe o script:
+
+```powershell
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/brcesarms/projeto-bancada/main/scripts/powershell/setup-ssh-pri.ps1" -OutFile "$env:USERPROFILE\Downloads\setup-ssh-pri.ps1"
+```
+
+> **Passo 2** — Abra o **Windows PowerShell como Administrador** (botão direito → Executar como administrador) e cole os 3 comandos abaixo:
+
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
+cd $env:USERPROFILE\Downloads
+.\setup-ssh-pri.ps1
+```
+
+> **Passo 3** — No final, o script mostra o **👤 usuário** e o **🌐 IP** da máquina. Anote e envie para o Bruno seguir com o backup. ✅
+
+```powershell
+# (Opcional) Verificar se o serviço ficou ativo:
+Get-Service sshd
+```
+
+> ⚠️ **Já tem o arquivo baixado e deu erro `Token '}' inesperado`?** A codificação está errada. Baixe de novo com o comando do Passo 1 e execute o Passo 2.
+
+---
+
 ## 📁 Estrutura do Repositório
 
 ```text
