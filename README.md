@@ -68,7 +68,8 @@ projeto-bancada/
 │   ├── powershell/
 │   │   ├── setup-ssh-pri.ps1     <-- Configura OpenSSH Server (rodar na máq. Windows)
 │   │   ├── inventario.ps1        <-- Inventário JSON (Etapa 1)
-│   │   └── backup-robocopy.ps1   <-- Backup por usuário (Etapa 2)
+│   │   ├── backup-robocopy.ps1   <-- Backup por usuário (Etapa 2)
+│   │   └── Win11Debloat.ps1      <-- 🧹 Remove bloatware/telemetria (pós-formatação, opcional)
 │   └── python/
 │       └── orquestrador.py       <-- Orquestrador completo (SFTP + JSON + manifesto)
 ├── templates/
@@ -98,6 +99,19 @@ python3 scripts/python/orquestrador.py \
 
 > 📖 Detalhes completos em [docs/instrucoes.md](./docs/instrucoes.md)
 
+## 🧹 Desbloat Windows 11 (pós-formatação, opcional)
+
+Após reinstalar o Windows, use o **Win11Debloat** para remover bloatware, telemetria e ajustar a privacidade:
+
+```powershell
+# Na máquina Windows (PowerShell 5.1 como Administrador):
+.\scripts\powershell\Win11Debloat.ps1 -RunDefaultsLite -Silent
+```
+
+> ⚠️ **Requisitos:** Windows PowerShell 5.1 (não o 7/pwsh) + **Administrador** + **Ponto de Restauração** recomendado.
+> 📖 Opções completas em [docs/instrucoes.md](./docs/instrucoes.md) (seção Desbloat).
+> 🔗 Projeto original: [Raphire/Win11Debloat](https://github.com/Raphire/Win11Debloat) (MIT).
+
 ## 🛡️ Segurança
 
 - ⚠️ **Repositório PÚBLICO** — **NUNCA** commitar manifestos reais (contêm chaves OEM e dados de clientes). Somente o template em `templates/` é versionado.
@@ -111,3 +125,4 @@ python3 scripts/python/orquestrador.py \
 - [Robocopy — Microsoft Learn](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/robocopy)
 - [OpenSSH Server no Windows](https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse)
 - [Paramiko](https://www.paramiko.org/)
+- [Win11Debloat — Raphire (GitHub)](https://github.com/Raphire/Win11Debloat) — licença MIT

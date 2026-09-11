@@ -13,11 +13,12 @@
 3. [Etapa 1 — Coleta de Inventário](#-etapa-1--coleta-de-inventário)
 4. [Etapa 2 — Backup com Robocopy](#-etapa-2--backup-com-robocopy)
 5. [Etapa 3 — Geração do Manifesto](#-etapa-3--geração-do-manifesto)
-6. [Orquestração em Python](#-orquestração-em-python)
-7. [Tratamento de Erros e Validação](#-tratamento-de-erros-e-validação)
-8. [Segurança e Boas Práticas](#-segurança-e-boas-práticas)
-9. [Fluxo de Execução Completo](#-fluxo-de-execução-completo)
-10. [🔗 Fontes](#-fontes)
+6. [Etapa 4 — Desbloat Windows 11](#-etapa-4--desbloat-windows-11-pós-formatação-opcional)
+7. [Orquestração em Python](#-orquestração-em-python)
+8. [Tratamento de Erros e Validação](#-tratamento-de-erros-e-validação)
+9. [Segurança e Boas Práticas](#-segurança-e-boas-práticas)
+10. [Fluxo de Execução Completo](#-fluxo-de-execução-completo)
+11. [🔗 Fontes](#-fontes)
 
 ---
 
@@ -305,6 +306,51 @@ Exemplo: `MANIFESTO_TECNOSOFT_2026-09-11.md`
 3. **Status de cópia** — tabela por pasta (copiada ⚠️ pendente / ❌ erro).
 4. **Checklist de reinstalação** — softwares detectados, com checkboxes.
 5. **Observações** — pendências, arquivos não copiados, peculiaridades.
+
+---
+
+## 🧹 Etapa 4 — Desbloat Windows 11 (pós-formatação, opcional)
+
+Após reinstalar o Windows e restaurar o backup, o **Win11Debloat** remove bloatware, telemetria e ajusta privacidade/visual. O script está incluído no projeto: `scripts/powershell/Win11Debloat.ps1` (628 linhas, UTF-8 BOM + CRLF).
+
+> 🔗 **Origem:** projeto open-source [Raphire/Win11Debloat](https://github.com/Raphire/Win11Debloat) (licença MIT). Mantemos cópia local para uso offline na bancada.
+
+### Requisitos
+| Requisito | Detalhe |
+| :--- | :--- |
+| 🪟 **Windows PowerShell 5.1** | O script **recusa** PowerShell 7 (pwsh) — Appx/restore point não carregam |
+| 👑 **Administrador** | O script pede elevação se não estiver |
+| 💾 **Ponto de Restauração** | Recomendado (`-CreateRestorePoint`) antes de remover apps |
+
+### Modos de uso recomendados (na máquina, como Admin)
+
+```powershell
+# Modo lite — ajustes leves de privacidade/visual sem remover apps (mais seguro)
+.\Win11Debloat.ps1 -RunDefaultsLite -Silent
+
+# Modo completo — remove bloatware + telemetria + ajustes (uso em máquina de cliente)
+.\Win11Debloat.ps1 -RunDefaults -Silent -CreateRestorePoint
+
+# Interativo — menu gráfico para escolher as opções
+.\Win11Debloat.ps1
+```
+
+### Flags mais úteis para a bancada
+
+| Flag | Efeito |
+| :--- | :--- |
+| `-RunDefaultsLite` | Ajustes leves: telemetria, Bing, busca, publicidade — **sem remover apps** |
+| `-RunDefaults` | Padrões completos: remove bloatware + ajustes (usa remoção `-RemoveApps`) |
+| `-Silent` | Sem prompts; usa defaults escolhidos |
+| `-CreateRestorePoint` | Cria ponto de restauração antes |
+| `-RemoveGamingApps` | Remove Xbox/Gaming (útil em máquinas de trabalho) |
+| `-RemoveHPApps` | Remove bloatware HP (se aplicável) |
+| `-ForceRemoveEdge` | Remove Microsoft Edge (⚠️ agressivo — só com OK do cliente) |
+| `-DisableTelemetry` | Desliga telemetria/diagnóstico |
+| `-EnableDarkMode` | Tema escuro |
+| `-TaskbarAlignLeft` | Alinha barra de tarefas à esquerda |
+
+> ⚠️ **Boas Práticas:** rodar SEMPRE com ponto de restauração; em máquinas de cliente, preferir `-RunDefaultsLite` (não remove apps) + configurar o restante conforme pedido; `-ForceRemoveEdge` apenas com autorização explícita.
 
 ---
 
