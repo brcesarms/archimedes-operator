@@ -1,0 +1,26 @@
+# 🛡️ Segurança — Não versionar dados sensíveis de clientes
+# Manifestos reais contêm chaves OEM de licença e dados pessoais de clientes.
+# Somente o TEMPLATE (templates/) deve ser versionado.
+manifests/*
+!manifests/.gitkeep
+
+# Credenciais — nunca versionar
+.env
+*.key
+*.pem
+id_rsa
+id_ed25519
+
+# Logs de execução (podem conter hostnames e usuários internos)
+logs/
+*.log
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Sistema
+.DS_Store
+Thumbs.db
