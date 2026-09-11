@@ -347,6 +347,41 @@ main() ──► conectar()                    (SSH via chave ed25519)
 - 📝 `gerar_manifesto` — monta o Markdown final a partir dos dados (tabelas + checklist de reinstalação).
 - 🚦 `main` — CLI com `--host`, `--usuario`, `--chave`, `--cliente`, `--destino` (opcional — pula backup se ausente) e `--saida` (destino alternativo do manifesto).
 
+### 🧪 Caso Real (2026-09-11) — Bug do SFTP corrigido
+
+> **Sintoma:** ao rodar o orquestrador pela 1ª vez na VM Windows 11, falhou com:
+> ```
+> ✖ Falha ao enviar script via SFTP: [Errno 2] No such file
+> ```
+> Mesmo com `inventario.ps1` existindo localmente.
+
+**Causa raiz (bug de lógica no `enviar_script`):**
+- A função recebia o caminho **do arquivo** remoto: `C:\Windows\Temp\projeto-bancada\inventario.ps1`
+- O bloco de criação de diretório fazia `sftp.stat(caminho_do_arquivo)` seguido de `sftp.mkdir(caminho_do_arquivo)` — ou seja, tentava criar um **diretório com o nome do arquivo**!
+- Quando `C:\Windows\Temp\projeto-bancada\` não existia, o `mkdir` (que era do "arquivo") não criava o **diretório pai**, e o `sftp.put` falhava com `No such file`.
+
+**Correção aplicada:**
+```python
+# Antes (bug): mkdir no caminho completo do ARQUIVO
+try:
+    sftp.stat(destino_remoto)
+except FileNotFoundError:
+    sftp.mkdir(destino_remoto)   # ❌ tentava criar dir "inventario.ps1"
+
+# Depois (fix): separa diretório e cria SÓ o diretório, com barras normais
+dir_remoto = posixpath.dirname(destino_remoto).replace("\\", "/")
+try:
+    sftp.stat(dir_remoto)
+except FileNotFoundError:
+    sftp.mkdir(dir_remoto)       # ✅ cria C:/Windows/Temp/projeto-bancada
+sftp.put(origem_local, destino_remoto.replace("\\", "/"))  # barras normais
+```
+
+**Lições registradas:**
+- 💡 O `sftp-server` do **Windows OpenSSH aceita caminhos com barras normais** (`C:/Windows/...`) — usar `replace("\\", "/")` evita inconsistências de separador.
+- 💡 `sftp.mkdir` **não cria diretórios intermediários** — precisa criar o diretório pai antes (ou um a um).
+- ✅ **Validado em execução real:** inventário coletado de `DESKTOP-3PH481H` (Windows 11 Pro, 9 softwares) e manifesto gerado com sucesso.
+
 ### Flags da CLI
 
 | Flag | Obrigatório | Descrição |
@@ -383,6 +418,8 @@ fi
 | `$LASTEXITCODE >= 8` | Arquivo bloqueado / permissão | Revisar log robocopy; /ZB + conta admin |
 | JSON vazio no inventário | PSRM / política de execução bloqueou | Subir com `-ExecutionPolicy Bypass` |
 | Comando não encontrado (`powershell.exe`) | PATH incompleto no sshd | Usar caminho completo `C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe` |
+| `Falha ao enviar script via SFTP: No such file` | `enviar_script` com mkdir no caminho do ARQUIVO (bug antigo) | Atualizar orquestrador (fix `posixpath.dirname` + barras normais) — ver seção "Caso Real" |
+| `sshd` RUNNING mas porta 22 fecha | Firewall Windows sem regra em rede `Public` | `netsh advfirewall firewall add rule name="OpenSSH-Server-In-TCP" dir=in action=allow protocol=TCP localport=22` |
 
 ### Validação pós-operação
 - ✅ Conferir existência do arquivo de manifesto: `ls -la manifests/MANIFESTO_*.md`
