@@ -16,10 +16,11 @@
 6. [Etapa 4 — Desbloat Windows 11](#-etapa-4--desbloat-windows-11-pós-formatação-opcional)
 7. [Etapa 5 — Pós-instalação](#-etapa-5--pós-instalação-ajustes--softwares-essenciais)
 8. [Orquestração em Python](#-orquestração-em-python)
-9. [Tratamento de Erros e Validação](#-tratamento-de-erros-e-validação)
-10. [Segurança e Boas Práticas](#-segurança-e-boas-práticas)
-11. [Fluxo de Execução Completo](#-fluxo-de-execução-completo)
-12. [🔗 Fontes](#-fontes)
+9. [Menu Interativo](#-menu-interativo)
+10. [Tratamento de Erros e Validação](#-tratamento-de-erros-e-validação)
+11. [Segurança e Boas Práticas](#-segurança-e-boas-práticas)
+12. [Fluxo de Execução Completo](#-fluxo-de-execução-completo)
+13. [🔗 Fontes](#-fontes)
 
 ---
 
@@ -454,7 +455,9 @@ Para máquinas **novas ou recém-formatadas**, o script `scripts/powershell/pos-
 ```text
 scripts/
 ├── python/
-│   └── orquestrador.py      # Classe/script principal que orquestra as 3 etapas
+│   ├── orquestrador.py      # Motor headless: orquestra as etapas (CLI)
+│   ├── menu.py              # Menu interativo opcional (usa o motor)
+│   └── tests/               # Testes pytest (orquestrador + menu)
 └── powershell/
     ├── inventario.ps1       # Bloco de inventário JSON (Etapa 1)
     └── backup-robocopy.ps1  # Loop de robocopy por usuário (Etapa 2)
@@ -531,6 +534,44 @@ sftp.put(origem_local, destino_remoto.replace("\\", "/"))  # barras normais
 | `--cliente` | ✅ | Nome do cliente para o manifesto |
 | `--destino` | opt | UNC do storage (se ausente, pula backup) |
 | `--saida` | opt | Caminho alternativo do manifesto |
+
+---
+
+## 🍽️ Menu Interativo
+
+Camada opcional sobre o orquestrador — para quando **você** quer escolher o que fazer (backup, instalar programas, etc.) sem decorar flags. O motor headless do `orquestrador.py` fica **intacto** para automação; o menu apenas importa e chama as mesmas funções.
+
+### Como usar
+
+```bash
+python3 scripts/python/menu.py
+```
+
+### Etapas disponíveis
+
+| Opção | Etapa | O que faz |
+| :--- | :--- | :--- |
+| `1` | 📊 Inventário | Coleta dados técnicos + chave OEM (JSON) |
+| `2` | 💾 Backup | Robocopy para o storage central |
+| `3` | 📋 Manifesto | Gera `MANIFESTO_<CLIENTE>_<DATA>.md` (depende da etapa 1) |
+| `4` | 🧹 Pós-instalação | Ajustes + apps + runtimes (pergunta o modo) |
+
+### Modos de pós-instalação (etapa 4)
+
+| Modo | Switches | Efeito |
+| :--- | :--- | :--- |
+| `C` completa | — | Ajustes + apps + runtimes (padrão) |
+| `A` só ajustes | `-SkipApps -SkipRuntimes` | Não instala nada |
+| `S` sem runtimes | `-SkipRuntimes` | Ajustes + apps |
+| `R` sem apps | `-SkipApps` | Ajustes + runtimes |
+
+### Regras do menu
+
+- Escolha múltipla separada por vírgula (ex: `1,4` para inventário + pós-instalação) ou `tudo`.
+- Menu **3** implica **1** automaticamente (manifesto sem inventário não faz sentido).
+- Destino vazio → etapa de backup pulada com aviso.
+- Conecta SSH **uma única vez** para todas as etapas escolhidas.
+- Ao final, mostra o caminho do manifesto e do log de pós-instalação.
 
 ---
 

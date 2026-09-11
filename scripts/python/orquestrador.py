@@ -262,6 +262,52 @@ def gerar_manifesto(inventario, status_copias, cliente, data, saida=None):
         return None
 
 
+# Modos de pós-instalação suportados (pos-instalacao.ps1)
+SWITCHES_POS = {
+    "completa": "",
+    "ajustes": " -SkipApps -SkipRuntimes",
+    "sem-runtimes": " -SkipRuntimes",
+    "sem-apps": " -SkipApps",
+}
+
+
+def montar_switches_pos(modo):
+    """Retorna os switches do pos-instalacao.ps1 para o modo escolhido."""
+    if modo not in SWITCHES_POS:
+        raise ValueError(f"Modo de pós-instalação inválido: {modo}")
+    return SWITCHES_POS[modo]
+
+
+def executar_pos_instalacao(client, modo="completa"):
+    """Envia pos-instalacao.ps1 e executa no modo escolhido.
+
+    Modos: 'completa' (ajustes+apps+runtimes), 'ajustes' (pula apps e
+    runtimes), 'sem-runtimes' (pula runtimes), 'sem-apps' (pula apps).
+
+    Redireciona toda a saída para log remoto (evita perda de buffer em
+    execuções longas). Retorna o caminho do log remoto, ou None em falha.
+    """
+    script_local = os.path.join(SCRIPTS_PS_DIR, "pos-instalacao.ps1")
+    script_remoto = f"{REMOTE_SCRIPT_DIR}\\pos-instalacao.ps1"
+
+    if not enviar_script(client, script_local, script_remoto):
+        return None
+
+    switches = montar_switches_pos(modo)
+    log_remoto = f"{REMOTE_SCRIPT_DIR}\\pos-instalacao.log"
+    comando = (
+        f'{PS_PREFIX} -Command "& \'{script_remoto}\'{switches} *> \'{log_remoto}\'"'
+    )
+    saida, erro, codigo = executar_remoto(client, comando)
+
+    if codigo != 0:
+        print(f"✖ Pós-instalação falhou (exit {codigo}). Erro: {erro}")
+        return None
+
+    print(f"✔ Pós-instalação ({modo}) concluída — log remoto: {log_remoto}")
+    return log_remoto
+
+
 def main():
     parser = argparse.ArgumentParser(description="Projeto Bancada — orquestrador")
     parser.add_argument("--host", required=True, help="IP/hostname da máquina alvo")
