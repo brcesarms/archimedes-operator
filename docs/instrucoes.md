@@ -416,6 +416,39 @@ Para máquinas **novas ou recém-formatadas**, o script `scripts/powershell/pos-
 
 ## 🐍 Orquestração em Python
 
+### 🗺️ Arquitetura geral
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│  🐍 PYTHON (o maestro)                                      │
+│  scripts/python/orquestrador.py                             │
+│                                                             │
+│  • conecta via SSH                                          │
+│  • envia os scripts .ps1                                    │
+│  • executa e interpreta o JSON                              │
+│  • gera o manifesto Markdown                                │
+└─────────────────────────────────────────────────────────────┘
+                        │
+                        ▼
+┌─────────────────────────────────────────────────────────────┐
+│  🪟 POWERSHELL (os braços)                                  │
+│  scripts/powershell/                                        │
+│                                                             │
+│  • inventario.ps1        → coleta dados da máquina          │
+│  • backup-robocopy.ps1   → copia pastas do usuário          │
+│  • pos-instalacao.ps1    → instala apps e runtimes          │
+│  • Win11Debloat.ps1      → limpa bloatware                  │
+└─────────────────────────────────────────────────────────────┘
+                        │
+                        ▼
+┌─────────────────────────────────────────────────────────────┐
+│  📋 MARKDOWN (o resultado)                                  │
+│  manifests/MANIFESTO_<cliente>_<data>.md                    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+> 🧠 **Em uma frase:** Python decide e orquestra; PowerShell executa no Windows; Markdown documenta.
+
 ### Estrutura sugerida
 
 ```text
