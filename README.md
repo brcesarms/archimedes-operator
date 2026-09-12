@@ -129,9 +129,9 @@ O orquestrador deste projeto referencia o `backup-robocopy.ps1` por caminho abso
 
 Os scripts de **pós-instalação** (ajustes + apps + runtimes) e **desbloat Windows 11** vivem no repositório dedicado:
 
-> 🔗 **[brcesarms/archimedes-after-install-win11](https://github.com/brcesarms/archimedes-after-install-win11)**
+> 🔗 **[brcesarms/archimedes-win11-setup](https://github.com/brcesarms/archimedes-win11-setup)**
 
-O orquestrador deste projeto referencia o `pos-instalacao.ps1` e o `Win11Debloat.zip` por caminho absoluto (`~/projetos/archimedes-after-install-win11/windows/`), suportando as flags `--pos` e `--debloat` **sem duplicar código**.
+O orquestrador deste projeto referencia o `pos-instalacao.ps1` e o `Win11Debloat.zip` por caminho absoluto (`~/projetos/archimedes-win11-setup/windows/`), suportando as flags `--pos` e `--debloat` **sem duplicar código**.
 
 ## 🍽️ Menu Interativo (Painel de Operações)
 
@@ -145,7 +145,7 @@ python3 scripts/python/menu.py
 
 ## 🧹 Desbloat e 🪟 Pós-instalação — rodar direto do módulo
 
-Após reinstalar o Windows, use os scripts do repositório dedicado **`archimedes-after-install-win11`**
+Após reinstalar o Windows, use os scripts do repositório dedicado **`archimedes-win11-setup`**
 (README e manual lá). Resumo rápido:
 
 ```powershell
@@ -158,7 +158,7 @@ Após reinstalar o Windows, use os scripts do repositório dedicado **`archimede
 
 > ⚠️ **Removidos deste repo em 2026-09-12:** `pos-instalacao.ps1`, `Win11Debloat.ps1`,
 > `Win11Debloat.zip` e `Win11Debloat/` agora vivem em
-> [brcesarms/archimedes-after-install-win11](https://github.com/brcesarms/archimedes-after-install-win11).
+> [brcesarms/archimedes-win11-setup](https://github.com/brcesarms/archimedes-win11-setup).
 > O orquestrador referencia por caminho absoluto — sem duplicação.
 > 📖 Opções completas em `docs/instrucoes.md` do novo módulo.
 

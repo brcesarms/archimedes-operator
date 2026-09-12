@@ -320,15 +320,15 @@ Exemplo: `MANIFESTO_TECNOSOFT_2026-09-11.md`
 ## 🧹 Etapa 4 — Desbloat Windows 11 e 🪟 Etapa 5 — Pós-instalação (módulo externo)
 
 > 🔄 **Migrado em 2026-09-12** para o repositório dedicado
-> [brcesarms/archimedes-after-install-win11](https://github.com/brcesarms/archimedes-after-install-win11).
+> [brcesarms/archimedes-win11-setup](https://github.com/brcesarms/archimedes-win11-setup).
 
 Os scripts `pos-instalacao.ps1`, `Win11Debloat.ps1`, `Win11Debloat.zip` e `Win11Debloat/`
 **saíram** de `scripts/powershell/` e agora vivem em
-`~/projetos/archimedes-after-install-win11/windows/` — o orquestrador referencia por
+`~/projetos/archimedes-win11-setup/windows/` — o orquestrador referencia por
 **caminho absoluto**, sem duplicar código (mesmo padrão do `backup-robocopy.ps1`).
 
 > 📖 **Manual completo** (requisitos, flags, modos de uso, tabela de apps/runtimes):
-> [`archimedes-after-install-win11/docs/instrucoes.md`](https://github.com/brcesarms/archimedes-after-install-win11)
+> [`archimedes-win11-setup/docs/instrucoes.md`](https://github.com/brcesarms/archimedes-win11-setup)
 
 ### Disparo remoto (via orquestrador)
 
@@ -391,7 +391,7 @@ scripts/
 └── powershell/
     ├── inventario.ps1       # Bloco de inventário JSON (Etapa 1)
     └── [backup-robocopy.ps1 → MOVIDO para archimedes-backup/windows/]
-    └── [pos-instalacao.ps1 + Win11Debloat.* → MOVIDOS para archimedes-after-install-win11/windows/]
+    └── [pos-instalacao.ps1 + Win11Debloat.* → MOVIDOS para archimedes-win11-setup/windows/]
 ```
 
 ### Dependências Python
@@ -409,7 +409,7 @@ main() ──► conectar()                    (SSH via chave ed25519)
    ├──► coletar_inventario()             (executa PS1 → json.loads → dict)
    ├──► enviar_script(backup-robocopy.ps1)  # de ~/projetos/archimedes-backup/windows/
    ├──► executar_backup(destino)         (executa PS1 com -Destino → json.loads)
-   ├──► enviar_script(pos-instalacao.ps1)   # de ~/projetos/archimedes-after-install-win11/windows/ (--pos)
+   ├──► enviar_script(pos-instalacao.ps1)   # de ~/projetos/archimedes-win11-setup/windows/ (--pos)
    ├──► enviar_script(Win11Debloat.zip)     # idem (--debloat)
    └──► gerar_manifesto()                (markdown → manifests/MANIFESTO_<cliente>_<data>.md)
 ```
