@@ -8,7 +8,7 @@ Uso:
 
 Fluxo:
     1. Inventario  — envia inventario.ps1, executa e faz parse do JSON.
-    2. Backup      — envia backup-robocopy.ps1, executa para o destino e parse do JSON.
+    2. Backup      — envia backup-robocopy.ps1 (do archimedes-backup), executa e parse do JSON.
     3. Manifesto   — gera MANIFESTO_<CLIENTE>_<DATA>.md em manifests/ (gitignored).
 """
 import argparse
@@ -23,6 +23,8 @@ import paramiko
 # Diretórios padrão do projeto
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 SCRIPTS_PS_DIR = os.path.join(BASE_DIR, "scripts", "powershell")
+# Backup agora vive no repositório dedicado archimedes-backup (caminho absoluto, sem duplicar código)
+ARCHIMEDES_BACKUP_DIR = os.path.expanduser("~/projetos/archimedes-backup/windows")
 MANIFESTS_DIR = os.path.join(BASE_DIR, "manifests")
 
 # Local remoto temporário onde os .ps1 são carregados
@@ -70,17 +72,15 @@ def enviar_script(client, origem_local, destino_remoto):
 
     sftp = client.open_sftp()
     try:
-        # Separa diretório e arquivo: o mkdir ocorre no DIRETÓRIO, não no arquivo.
-        dir_remoto = posixpath.dirname(destino_remoto)
         # Garante caminho com barras normais (sftp do Windows aceita 'C:/...')
-        dir_remoto = dir_remoto.replace("\\", "/")
+        destino_envio = destino_remoto.replace("\\", "/")
+        # Separa diretório e arquivo: o mkdir ocorre no DIRETÓRIO, não no arquivo.
+        dir_remoto = posixpath.dirname(destino_envio)
         try:
             sftp.stat(dir_remoto)
         except FileNotFoundError:
             sftp.mkdir(dir_remoto)
             print(f"✔ Diretório remoto criado: {dir_remoto}")
-        # Envia para o caminho no formato aceito pelo sftp-server do Windows
-        destino_envio = destino_remoto.replace("\\", "/")
         sftp.put(origem_local, destino_envio)
         print(f"✔ Script enviado: {os.path.basename(origem_local)}")
         return True
@@ -141,7 +141,7 @@ def executar_backup(client, destino):
 
     Retorna lista de status por pasta, ou None em falha.
     """
-    script_local = os.path.join(SCRIPTS_PS_DIR, "backup-robocopy.ps1")
+    script_local = os.path.join(ARCHIMEDES_BACKUP_DIR, "backup-robocopy.ps1")
     script_remoto = f"{REMOTE_SCRIPT_DIR}\\backup-robocopy.ps1"
 
     if not enviar_script(client, script_local, script_remoto):
@@ -279,14 +279,16 @@ def montar_switches_pos(modo):
 
 
 def executar_pos_instalacao(client, modo="completa"):
-    """Envia pos-instalacao.ps1 e executa no modo escolhido.
+    """Envia pos-instalacao.ps1 e executa no modo escolhido com monitoramento de log.
 
     Modos: 'completa' (ajustes+apps+runtimes), 'ajustes' (pula apps e
     runtimes), 'sem-runtimes' (pula runtimes), 'sem-apps' (pula apps).
 
     Redireciona toda a saída para log remoto (evita perda de buffer em
-    execuções longas). Retorna o caminho do log remoto, ou None em falha.
+    execuções longas) e faz streaming progressivo para o stdout local.
     """
+    import time
+
     script_local = os.path.join(SCRIPTS_PS_DIR, "pos-instalacao.ps1")
     script_remoto = f"{REMOTE_SCRIPT_DIR}\\pos-instalacao.ps1"
 
@@ -295,38 +297,134 @@ def executar_pos_instalacao(client, modo="completa"):
 
     switches = montar_switches_pos(modo)
     log_remoto = f"{REMOTE_SCRIPT_DIR}\\pos-instalacao.log"
+    log_remoto_norm = log_remoto.replace("\\", "/")
+
+    # Limpa log antigo se existir
+    executar_remoto(
+        client,
+        f'{PS_PREFIX} -Command "Remove-Item \'{log_remoto}\' -Force -ErrorAction SilentlyContinue"',
+    )
+
     comando = (
         f'{PS_PREFIX} -Command "& \'{script_remoto}\'{switches} *> \'{log_remoto}\'"'
     )
-    saida, erro, codigo = executar_remoto(client, comando)
+    print(f"⏳ Executando pós-instalação ({modo}) remotamente via PowerShell...")
 
+    transport = client.get_transport()
+    channel = transport.open_session()
+    channel.exec_command(comando)
+
+    sftp = client.open_sftp()
+    pos = 0
+    while not channel.exit_status_ready():
+        time.sleep(3)
+        try:
+            with sftp.open(log_remoto_norm, "rb") as f:
+                f.seek(pos)
+                novos_bytes = f.read()
+                if novos_bytes:
+                    pos += len(novos_bytes)
+                    texto = novos_bytes.decode("utf-16le", errors="replace")
+                    sys.stdout.write(texto)
+                    sys.stdout.flush()
+        except IOError:
+            pass
+
+    # Lê o restante após conclusão
+    try:
+        with sftp.open(log_remoto_norm, "rb") as f:
+            f.seek(pos)
+            sobra = f.read()
+            if sobra:
+                texto = sobra.decode("utf-16le", errors="replace")
+                sys.stdout.write(texto)
+                sys.stdout.flush()
+    except IOError:
+        pass
+    sftp.close()
+
+    codigo = channel.recv_exit_status()
     if codigo != 0:
-        print(f"✖ Pós-instalação falhou (exit {codigo}). Erro: {erro}")
+        print(f"✖ Pós-instalação falhou (exit {codigo}).")
         return None
 
     print(f"✔ Pós-instalação ({modo}) concluída — log remoto: {log_remoto}")
     return log_remoto
 
 
-def executar_debloat(client, switches="-RunDefaultsLite -Silent"):
-    """Envia Win11Debloat.ps1 e executa remotamente de forma silenciosa.
+def executar_debloat(client, switches="-RunDefaults -Silent -CreateRestorePoint"):
+    """Envia pacote Win11Debloat e executa remotamente de forma silenciosa com monitoramento de log.
 
-    Redireciona saída para log remoto. Retorna caminho do log ou None em falha.
+    Redireciona saída para log remoto e faz streaming para o stdout local.
     """
-    script_local = os.path.join(SCRIPTS_PS_DIR, "Win11Debloat.ps1")
-    script_remoto = f"{REMOTE_SCRIPT_DIR}\\Win11Debloat.ps1"
+    import time
 
-    if not enviar_script(client, script_local, script_remoto):
+    zip_local = os.path.join(SCRIPTS_PS_DIR, "Win11Debloat.zip")
+    zip_remoto = f"{REMOTE_SCRIPT_DIR}\\Win11Debloat.zip"
+    debloat_dir_remoto = f"{REMOTE_SCRIPT_DIR}\\Win11Debloat"
+
+    if not enviar_script(client, zip_local, zip_remoto):
+        return None
+
+    # Descompacta zip no diretório remoto
+    unzip_cmd = (
+        f'{PS_PREFIX} -Command "Expand-Archive -Path \'{zip_remoto}\' -DestinationPath \'{debloat_dir_remoto}\' -Force"'
+    )
+    _, err, code = executar_remoto(client, unzip_cmd)
+    if code != 0:
+        print(f"✖ Falha ao descompactar Win11Debloat remotamente: {err}")
         return None
 
     log_remoto = f"{REMOTE_SCRIPT_DIR}\\debloat.log"
+    log_remoto_norm = log_remoto.replace("\\", "/")
+    script_remoto = f"{debloat_dir_remoto}\\Win11Debloat.ps1"
+
+    # Limpa log anterior
+    executar_remoto(
+        client,
+        f'{PS_PREFIX} -Command "Remove-Item \'{log_remoto}\' -Force -ErrorAction SilentlyContinue"',
+    )
+
     comando = (
         f'{PS_PREFIX} -Command "& \'{script_remoto}\' {switches} *> \'{log_remoto}\'"'
     )
-    saida, erro, codigo = executar_remoto(client, comando)
+    print(f"⏳ Executando Win11Debloat ({switches}) remotamente via PowerShell...")
 
+    transport = client.get_transport()
+    channel = transport.open_session()
+    channel.exec_command(comando)
+
+    sftp = client.open_sftp()
+    pos = 0
+    while not channel.exit_status_ready():
+        time.sleep(3)
+        try:
+            with sftp.open(log_remoto_norm, "rb") as f:
+                f.seek(pos)
+                novos_bytes = f.read()
+                if novos_bytes:
+                    pos += len(novos_bytes)
+                    texto = novos_bytes.decode("utf-16le", errors="replace")
+                    sys.stdout.write(texto)
+                    sys.stdout.flush()
+        except IOError:
+            pass
+
+    try:
+        with sftp.open(log_remoto_norm, "rb") as f:
+            f.seek(pos)
+            sobra = f.read()
+            if sobra:
+                texto = sobra.decode("utf-16le", errors="replace")
+                sys.stdout.write(texto)
+                sys.stdout.flush()
+    except IOError:
+        pass
+    sftp.close()
+
+    codigo = channel.recv_exit_status()
     if codigo != 0:
-        print(f"✖ Desbloat falhou (exit {codigo}). Erro: {erro}")
+        print(f"✖ Desbloat falhou (exit {codigo}).")
         return None
 
     print(f"✔ Desbloat concluído — log remoto: {log_remoto}")
@@ -342,7 +440,7 @@ def main():
         default=os.path.expanduser("~/.ssh/id_ed25519"),
         help="Caminho da chave privada SSH",
     )
-    parser.add_argument("--cliente", required=True, help="Nome do cliente")
+    parser.add_argument("--cliente", help="Nome do cliente (obrigatório para inventário/manifesto)")
     parser.add_argument(
         "--destino",
         help="UNC do storage central (ex: \\\\nas\\Bancada\\CLIENTE). Sem este flag, pula backup.",
@@ -351,6 +449,18 @@ def main():
         "--saida",
         help="Caminho alternativo do manifesto (padrão: manifests/).",
     )
+    parser.add_argument(
+        "--pos",
+        choices=["completa", "ajustes", "sem-runtimes", "sem-apps"],
+        help="Executa pós-instalação no modo especificado",
+    )
+    parser.add_argument(
+        "--debloat",
+        choices=["completo", "lite"],
+        nargs="?",
+        const="completo",
+        help="Executa Win11Debloat (completo ou lite)",
+    )
     args = parser.parse_args()
 
     data = datetime.date.today().isoformat()
@@ -358,24 +468,44 @@ def main():
     print(f"⏳ Conectando a {args.host} como {args.usuario}...")
     client = conectar(args.host, args.usuario, args.chave)
     try:
-        # Etapa 1 — Inventário (obrigatória)
-        inventario = coletar_inventario(client)
-        if inventario is None:
-            print("✖ Abortando: inventário falhou.")
-            return 1
+        if args.pos:
+            print(f"⏳ Iniciando etapa de pós-instalação (modo: {args.pos})...")
+            log = executar_pos_instalacao(client, args.pos)
+            if not log:
+                print("✖ Pós-instalação falhou.")
+                return 1
 
-        # Etapa 2 — Backup (opcional, só com --destino)
-        status = {}
-        if args.destino:
-            status = executar_backup(client, args.destino)
-            if status is None:
-                print("⚠ Backup falhou — manifesto será gerado sem status de cópia.")
-                status = {}
+        if args.debloat:
+            switches = (
+                "-RunDefaults -Silent -CreateRestorePoint"
+                if args.debloat == "completo"
+                else "-RunDefaultsLite -Silent -CreateRestorePoint"
+            )
+            print(f"⏳ Iniciando etapa de debloat (modo: {args.debloat})...")
+            log = executar_debloat(client, switches)
+            if not log:
+                print("✖ Debloat falhou.")
+                return 1
 
-        # Etapa 3 — Manifesto
-        manifesto = gerar_manifesto(inventario, status, args.cliente, data, args.saida)
-        if manifesto is None:
-            return 1
+        if args.cliente:
+            # Etapa 1 — Inventário (obrigatória)
+            inventario = coletar_inventario(client)
+            if inventario is None:
+                print("✖ Abortando: inventário falhou.")
+                return 1
+
+            # Etapa 2 — Backup (opcional, só com --destino)
+            status = {}
+            if args.destino:
+                status = executar_backup(client, args.destino)
+                if status is None:
+                    print("⚠ Backup falhou — manifesto será gerado sem status de cópia.")
+                    status = {}
+
+            # Etapa 3 — Manifesto
+            manifesto = gerar_manifesto(inventario, status, args.cliente, data, args.saida)
+            if manifesto is None:
+                return 1
 
         print("🎯 Fluxo concluído com sucesso!")
         return 0

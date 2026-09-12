@@ -222,6 +222,12 @@ $res | ConvertTo-Json -Depth 3
 
 ## 📦 Etapa 2 — Backup com Robocopy
 
+> 💾 **Migrado:** o script `backup-robocopy.ps1` agora vive no repositório dedicado
+> [`brcesarms/archimedes-backup`](https://github.com/brcesarms/archimedes-backup) (`windows/`).
+> O orquestrador deste projeto o referencia por caminho absoluto
+> (`~/projetos/archimedes-backup/windows/backup-robocopy.ps1`).
+> Seção mantida aqui como **referência técnica** da Etapa 2.
+
 ### Parâmetros recomendados
 
 ```powershell
@@ -436,7 +442,7 @@ Para máquinas **novas ou recém-formatadas**, o script `scripts/powershell/pos-
 │  scripts/powershell/                                        │
 │                                                             │
 │  • inventario.ps1        → coleta dados da máquina          │
-│  • backup-robocopy.ps1   → copia pastas do usuário          │
+│  • backup-robocopy.ps1   → copia pastas (archimedes-backup) │
 │  • pos-instalacao.ps1    → instala apps e runtimes          │
 │  • Win11Debloat.ps1      → limpa bloatware                  │
 └─────────────────────────────────────────────────────────────┘
@@ -460,7 +466,7 @@ scripts/
 │   └── tests/               # Testes pytest (orquestrador + menu)
 └── powershell/
     ├── inventario.ps1       # Bloco de inventário JSON (Etapa 1)
-    └── backup-robocopy.ps1  # Loop de robocopy por usuário (Etapa 2)
+    └── [backup-robocopy.ps1 → MOVIDO para archimedes-backup/windows/]
 ```
 
 ### Dependências Python
@@ -476,7 +482,7 @@ O orquestrador está **implementado e funcional**. Fluxo executado por chamada:
 main() ──► conectar()                    (SSH via chave ed25519)
    ├──► enviar_script(inventario.ps1)    (SFTP → C:\Windows\Temp\projeto-bancada\)
    ├──► coletar_inventario()             (executa PS1 → json.loads → dict)
-   ├──► enviar_script(backup-robocopy.ps1)
+   ├──► enviar_script(backup-robocopy.ps1)  # de ~/projetos/archimedes-backup/windows/
    ├──► executar_backup(destino)         (executa PS1 com -Destino → json.loads)
    └──► gerar_manifesto()                (markdown → manifests/MANIFESTO_<cliente>_<data>.md)
 ```

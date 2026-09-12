@@ -2,7 +2,7 @@
 
 > Triagem, inventário técnico e backup forense pré-formatação de máquinas Windows via SSH.
 
-Automação executada via **OpenCode CLI** para o fluxo de bancada do T.I. — coleta inventário (usuários, chave OEM, softwares), faz backup com `robocopy` e gera manifestos em Markdown para o Obsidian.
+Automação executada via **OpenCode CLI** para o fluxo de bancada do T.I. — coleta inventário (usuários, chave OEM, softwares), **orquestra o backup** (módulo externo [`archimedes-backup`](https://github.com/brcesarms/archimedes-backup)) e gera manifestos em Markdown para o Obsidian.
 
 ---
 
@@ -69,10 +69,9 @@ projeto-bancada/
 │   │   ├── setup-ssh-pri.ps1     <-- Configura OpenSSH Server (rodar na máq. Windows)
 │   │   ├── pos-instalacao.ps1    <-- 🪟 Pós-instalação: ajustes + apps + runtimes (rodar 1ª vez)
 │   │   ├── inventario.ps1        <-- Inventário JSON (Etapa 1)
-│   │   ├── backup-robocopy.ps1   <-- Backup por usuário (Etapa 2)
 │   │   └── Win11Debloat.ps1      <-- 🧹 Remove bloatware/telemetria (pós-formatação, opcional)
 │   └── python/
-│       └── orquestrador.py       <-- Orquestrador completo (SFTP + JSON + manifesto)
+│       └── orquestrador.py       <-- Orquestrador (SFTP + JSON + manifesto; backup via archimedes-backup)
 ├── templates/
 │   └── MANIFESTO_TEMPLATE.md     <-- Modelo do manifesto Obsidian (Etapa 3)
 ├── tests/
@@ -119,6 +118,14 @@ python3 scripts/python/orquestrador.py \
   --cliente TECNOSOFT \
   --destino '\\storage-central\Bancada\TECNOSOFT'
 ```
+
+## 💾 Backup — módulo separado
+
+O backup (Windows por usuário com `robocopy` **e** Linux com `rsync`) vive no repositório dedicado:
+
+> 🔗 **[brcesarms/archimedes-backup](https://github.com/brcesarms/archimedes-backup)**
+
+O orquestrador deste projeto referencia o `backup-robocopy.ps1` por caminho absoluto (`~/projetos/archimedes-backup/windows/`), mantendo o fluxo da Etapa 2 da bancada **sem duplicar código**.
 
 ## 🍽️ Menu Interativo (Painel de Operações)
 
