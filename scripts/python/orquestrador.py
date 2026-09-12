@@ -10,6 +10,8 @@ Fluxo:
     1. Inventario  — envia inventario.ps1, executa e faz parse do JSON.
     2. Backup      — envia backup-robocopy.ps1 (do archimedes-backup), executa e parse do JSON.
     3. Manifesto   — gera MANIFESTO_<CLIENTE>_<DATA>.md em manifests/ (gitignored).
+    4. Pós-instalação — envia pos-instalacao.ps1 (do archimedes-after-install-win11), executa.
+    5. Desbloat    — envia Win11Debloat.zip (do archimedes-after-install-win11), descompacta e executa.
 """
 import argparse
 import datetime
@@ -25,6 +27,9 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fil
 SCRIPTS_PS_DIR = os.path.join(BASE_DIR, "scripts", "powershell")
 # Backup agora vive no repositório dedicado archimedes-backup (caminho absoluto, sem duplicar código)
 ARCHIMEDES_BACKUP_DIR = os.path.expanduser("~/projetos/archimedes-backup/windows")
+# Pós-instalação + desbloat agora vivem no repositório archimedes-after-install-win11
+# (caminho absoluto, sem duplicar código)
+ARCHIMEDES_AFTER_INSTALL_DIR = os.path.expanduser("~/projetos/archimedes-after-install-win11/windows")
 MANIFESTS_DIR = os.path.join(BASE_DIR, "manifests")
 
 # Local remoto temporário onde os .ps1 são carregados
@@ -289,7 +294,7 @@ def executar_pos_instalacao(client, modo="completa"):
     """
     import time
 
-    script_local = os.path.join(SCRIPTS_PS_DIR, "pos-instalacao.ps1")
+    script_local = os.path.join(ARCHIMEDES_AFTER_INSTALL_DIR, "pos-instalacao.ps1")
     script_remoto = f"{REMOTE_SCRIPT_DIR}\\pos-instalacao.ps1"
 
     if not enviar_script(client, script_local, script_remoto):
@@ -359,7 +364,7 @@ def executar_debloat(client, switches="-RunDefaults -Silent -CreateRestorePoint"
     """
     import time
 
-    zip_local = os.path.join(SCRIPTS_PS_DIR, "Win11Debloat.zip")
+    zip_local = os.path.join(ARCHIMEDES_AFTER_INSTALL_DIR, "Win11Debloat.zip")
     zip_remoto = f"{REMOTE_SCRIPT_DIR}\\Win11Debloat.zip"
     debloat_dir_remoto = f"{REMOTE_SCRIPT_DIR}\\Win11Debloat"
 

@@ -317,109 +317,33 @@ Exemplo: `MANIFESTO_TECNOSOFT_2026-09-11.md`
 
 ---
 
-## 🧹 Etapa 4 — Desbloat Windows 11 (pós-formatação, opcional)
+## 🧹 Etapa 4 — Desbloat Windows 11 e 🪟 Etapa 5 — Pós-instalação (módulo externo)
 
-Após reinstalar o Windows e restaurar o backup, o **Win11Debloat** remove bloatware, telemetria e ajusta privacidade/visual. O script está incluído no projeto: `scripts/powershell/Win11Debloat.ps1` (628 linhas, UTF-8 BOM + CRLF).
+> 🔄 **Migrado em 2026-09-12** para o repositório dedicado
+> [brcesarms/archimedes-after-install-win11](https://github.com/brcesarms/archimedes-after-install-win11).
 
-> 🔗 **Origem:** projeto open-source [Raphire/Win11Debloat](https://github.com/Raphire/Win11Debloat) (licença MIT). Mantemos cópia local para uso offline na bancada.
+Os scripts `pos-instalacao.ps1`, `Win11Debloat.ps1`, `Win11Debloat.zip` e `Win11Debloat/`
+**saíram** de `scripts/powershell/` e agora vivem em
+`~/projetos/archimedes-after-install-win11/windows/` — o orquestrador referencia por
+**caminho absoluto**, sem duplicar código (mesmo padrão do `backup-robocopy.ps1`).
 
-### Requisitos
-| Requisito | Detalhe |
-| :--- | :--- |
-| 🪟 **Windows PowerShell 5.1** | O script **recusa** PowerShell 7 (pwsh) — Appx/restore point não carregam |
-| 👑 **Administrador** | O script pede elevação se não estiver |
-| 💾 **Ponto de Restauração** | Recomendado (`-CreateRestorePoint`) antes de remover apps |
+> 📖 **Manual completo** (requisitos, flags, modos de uso, tabela de apps/runtimes):
+> [`archimedes-after-install-win11/docs/instrucoes.md`](https://github.com/brcesarms/archimedes-after-install-win11)
 
-### Modos de uso recomendados (na máquina, como Admin)
+### Disparo remoto (via orquestrador)
 
-```powershell
-# Modo lite — ajustes leves de privacidade/visual sem remover apps (mais seguro)
-.\Win11Debloat.ps1 -RunDefaultsLite -Silent
-
-# Modo completo — remove bloatware + telemetria + ajustes (uso em máquina de cliente)
-.\Win11Debloat.ps1 -RunDefaults -Silent -CreateRestorePoint
-
-# Interativo — menu gráfico para escolher as opções
-.\Win11Debloat.ps1
+```bash
+python3 scripts/python/orquestrador.py --host <IP> --usuario <user> --chave ~/.ssh/id_ed25519 --pos completa
+python3 scripts/python/orquestrador.py --host <IP> --usuario <user> --chave ~/.ssh/id_ed25519 --debloat lite
 ```
 
-### Flags mais úteis para a bancada
-
-| Flag | Efeito |
+| Flag | Modos |
 | :--- | :--- |
-| `-RunDefaultsLite` | Ajustes leves: telemetria, Bing, busca, publicidade — **sem remover apps** |
-| `-RunDefaults` | Padrões completos: remove bloatware + ajustes (usa remoção `-RemoveApps`) |
-| `-Silent` | Sem prompts; usa defaults escolhidos |
-| `-CreateRestorePoint` | Cria ponto de restauração antes |
-| `-RemoveGamingApps` | Remove Xbox/Gaming (útil em máquinas de trabalho) |
-| `-RemoveHPApps` | Remove bloatware HP (se aplicável) |
-| `-ForceRemoveEdge` | Remove Microsoft Edge (⚠️ agressivo — só com OK do cliente) |
-| `-DisableTelemetry` | Desliga telemetria/diagnóstico |
-| `-EnableDarkMode` | Tema escuro |
-| `-TaskbarAlignLeft` | Alinha barra de tarefas à esquerda |
+| `--pos` | `completa` (padrão), `ajustes`, `sem-runtimes`, `sem-apps` |
+| `--debloat` | `completo` (padrão), `lite` |
 
-> ⚠️ **Boas Práticas:** rodar SEMPRE com ponto de restauração; em máquinas de cliente, preferir `-RunDefaultsLite` (não remove apps) + configurar o restante conforme pedido; `-ForceRemoveEdge` apenas com autorização explícita.
-
----
-
-## 🪟 Etapa 5 — Pós-instalação (ajustes + softwares essenciais)
-
-Para máquinas **novas ou recém-formatadas**, o script `scripts/powershell/pos-instalacao.ps1` aplica ajustes de sistema e instala os aplicativos + runtimes essenciais da bancada num único comando. É a última etapa antes de entregar a máquina ao cliente.
-
-> 🧠 **Cenário da bancada:** a ordem ideal é **Etapa 4 (Desbloat) → Etapa 5 (Pós-instalação)** — primeiro remove o que não serve, depois instala o que é essencial. A **Etapa 3 (Manifesto)** já registrou os softwares detectados no checklist de reinstalação; o `pos-instalacao.ps1` cobre a instalação em lote.
-
-### O que o script faz
-
-| Etapa | Ação | Detalhes |
-| :--- | :--- | :--- |
-| 1 | 🔓 ExecutionPolicy | `Unrestricted` em `LocalMachine` (para scripts da bancada) |
-| 2 | 🔌 Energia | `VIDEOIDLE`, `STANDBYIDLE` e `HIBERNATEIDLE` = 0 (AC e DC) via `powercfg` |
-| 3 | 🌙 Tema escuro | `AppsUseLightTheme` + `SystemUsesLightTheme` = 0 |
-| 4 | 🕵️ Histórico de Atividades | `Start_TrackDocs` = 0 |
-| 5 | 📵 Background apps | `GlobalUserDisabled` = 1 |
-| 6 | 🧩 Apps essenciais | 10 apps via winget |
-| 7 | ⚙️ Runtimes | 19 pacotes via winget |
-
-### Aplicativos instalados (Etapa 6)
-
-| Categoria | Pacotes |
-| :--- | :--- |
-| Terminal | `Microsoft.PowerShell`, `Microsoft.WindowsTerminal` |
-| Utilidades | `7zip.7zip`, `Skillbrains.Lightshot` |
-| Navegador | `Mozilla.Firefox`, `Google.Chrome` |
-| Documentos | `Foxit.FoxitReader`, `TheDocumentFoundation.LibreOffice` |
-| Remoto | `Install-RustDesk` (fallback manual — sem pacote no winget) |
-| Multimídia | `VideoLAN.VLC` |
-
-### Runtimes instalados (Etapa 7)
-
-| Categoria | Pacotes |
-| :--- | :--- |
-| .NET Framework | `Microsoft.DotNet.Framework.DeveloperPack_4`, `Microsoft.DotNet.Framework.DeveloperPack.4.5` |
-| .NET Runtime | `5`, `6`, `7`, `8` |
-| VC++ Redist | `2005`, `2008`, `2010`, `2012`, `2013`, `2015+` (x86 + x64) |
-| Java | `Oracle.JavaRuntimeEnvironment` |
-
-### Como usar (na máquina, PowerShell 5.1 como Admin)
-
-```powershell
-# Rodar tudo (recomendado):
-.\scripts\powershell\pos-instalacao.ps1
-
-# Pular apps ou runtimes:
-.\scripts\powershell\pos-instalacao.ps1 -SkipApps
-.\scripts\powershell\pos-instalacao.ps1 -SkipRuntimes
-```
-
-### Comportamento
-
-- ✅ **Tolerante a falhas:** cada `winget install` roda isolado; se um pacote falhar, o script continua e reporta no resumo final.
-- 📊 **Resumo final:** ao término lista `$Erros.Count` falhas (se houver) e sugere `winget upgrade --all`.
-- 🔄 **Reinício:** o visual (tema escuro) aplica após reiniciar.
-- 📦 **RustDesk:** não existe mais pacote no winget (removido da community). O script baixa o último release **x86_64 do GitHub oficial** e instala com `--silent-install`.
-- ⚠️ **BOM duplicado:** o PowerShell 5.1 quebra (`ParserError`) se o `.ps1` tiver BOM UTF-8 duplicado. Arquivos do repositório devem ter **BOM único + CRLF**.
-
----
+> 🧠 **Ordem ideal da bancada:** Etapa 4 (Desbloat) → Etapa 5 (Pós-instalação) — primeiro
+> remove o que não serve, depois instala o que é essencial.
 
 ## 🐍 Orquestração em Python
 
@@ -443,8 +367,8 @@ Para máquinas **novas ou recém-formatadas**, o script `scripts/powershell/pos-
 │                                                             │
 │  • inventario.ps1        → coleta dados da máquina          │
 │  • backup-robocopy.ps1   → copia pastas (archimedes-backup) │
-│  • pos-instalacao.ps1    → instala apps e runtimes          │
-│  • Win11Debloat.ps1      → limpa bloatware                  │
+│  • pos-instalacao.ps1    → apps+runtimes (after-install)    │
+│  • Win11Debloat.ps1      → limpa bloatware (after-install)  │
 └─────────────────────────────────────────────────────────────┘
                         │
                         ▼
@@ -467,6 +391,7 @@ scripts/
 └── powershell/
     ├── inventario.ps1       # Bloco de inventário JSON (Etapa 1)
     └── [backup-robocopy.ps1 → MOVIDO para archimedes-backup/windows/]
+    └── [pos-instalacao.ps1 + Win11Debloat.* → MOVIDOS para archimedes-after-install-win11/windows/]
 ```
 
 ### Dependências Python
@@ -484,6 +409,8 @@ main() ──► conectar()                    (SSH via chave ed25519)
    ├──► coletar_inventario()             (executa PS1 → json.loads → dict)
    ├──► enviar_script(backup-robocopy.ps1)  # de ~/projetos/archimedes-backup/windows/
    ├──► executar_backup(destino)         (executa PS1 com -Destino → json.loads)
+   ├──► enviar_script(pos-instalacao.ps1)   # de ~/projetos/archimedes-after-install-win11/windows/ (--pos)
+   ├──► enviar_script(Win11Debloat.zip)     # idem (--debloat)
    └──► gerar_manifesto()                (markdown → manifests/MANIFESTO_<cliente>_<data>.md)
 ```
 

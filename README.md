@@ -67,11 +67,9 @@ projeto-bancada/
 ├── scripts/
 │   ├── powershell/
 │   │   ├── setup-ssh-pri.ps1     <-- Configura OpenSSH Server (rodar na máq. Windows)
-│   │   ├── pos-instalacao.ps1    <-- 🪟 Pós-instalação: ajustes + apps + runtimes (rodar 1ª vez)
-│   │   ├── inventario.ps1        <-- Inventário JSON (Etapa 1)
-│   │   └── Win11Debloat.ps1      <-- 🧹 Remove bloatware/telemetria (pós-formatação, opcional)
+│   │   └── inventario.ps1        <-- Inventário JSON (Etapa 1)
 │   └── python/
-│       └── orquestrador.py       <-- Orquestrador (SFTP + JSON + manifesto; backup via archimedes-backup)
+│       └── orquestrador.py       <-- Orquestrador (SFTP + JSON + manifesto; backup e pós-instalação via módulos externos)
 ├── templates/
 │   └── MANIFESTO_TEMPLATE.md     <-- Modelo do manifesto Obsidian (Etapa 3)
 ├── tests/
@@ -127,6 +125,14 @@ O backup (Windows por usuário com `robocopy` **e** Linux com `rsync`) vive no r
 
 O orquestrador deste projeto referencia o `backup-robocopy.ps1` por caminho absoluto (`~/projetos/archimedes-backup/windows/`), mantendo o fluxo da Etapa 2 da bancada **sem duplicar código**.
 
+## 🪟 Pós-instalação e Desbloat — módulo separado
+
+Os scripts de **pós-instalação** (ajustes + apps + runtimes) e **desbloat Windows 11** vivem no repositório dedicado:
+
+> 🔗 **[brcesarms/archimedes-after-install-win11](https://github.com/brcesarms/archimedes-after-install-win11)**
+
+O orquestrador deste projeto referencia o `pos-instalacao.ps1` e o `Win11Debloat.zip` por caminho absoluto (`~/projetos/archimedes-after-install-win11/windows/`), suportando as flags `--pos` e `--debloat` **sem duplicar código**.
+
 ## 🍽️ Menu Interativo (Painel de Operações)
 
 Para operar de forma guiada com a tela inicial explicativa:
@@ -137,41 +143,24 @@ python3 scripts/python/menu.py
 
 > 📖 Detalhes completos em [docs/instrucoes.md](./docs/instrucoes.md)
 
-## 🧹 Desbloat Windows 11 (pós-formatação, opcional)
+## 🧹 Desbloat e 🪟 Pós-instalação — rodar direto do módulo
 
-Após reinstalar o Windows, use o **Win11Debloat** para remover bloatware, telemetria e ajustar a privacidade:
-
-```powershell
-# Na máquina Windows (PowerShell 5.1 como Administrador):
-.\scripts\powershell\Win11Debloat.ps1 -RunDefaultsLite -Silent
-```
-
-> ⚠️ **Requisitos:** Windows PowerShell 5.1 (não o 7/pwsh) + **Administrador** + **Ponto de Restauração** recomendado.
-> 📖 Opções completas em [docs/instrucoes.md](./docs/instrucoes.md) (seção Desbloat).
-> 🔗 Projeto original: [Raphire/Win11Debloat](https://github.com/Raphire/Win11Debloat) (MIT).
-
-## 🪟 Pós-instalação (ajustes + softwares essenciais)
-
-Para máquinas novas / recém-formatadas, rode o **pos-instalacao.ps1** — aplica ajustes de sistema (energia, tema escuro, privacidade) e instala apps + runtimes via winget:
+Após reinstalar o Windows, use os scripts do repositório dedicado **`archimedes-after-install-win11`**
+(README e manual lá). Resumo rápido:
 
 ```powershell
-# Na máquina Windows (PowerShell 5.1 como Administrador):
-Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
-.\scripts\powershell\pos-instalacao.ps1
+# Desbloat (PowerShell 5.1 como Admin):
+.\windows\Win11Debloat.ps1 -RunDefaultsLite -Silent
+
+# Pós-instalação (ajustes + 10 apps + 19 runtimes via winget):
+.\windows\pos-instalacao.ps1
 ```
 
-| Etapa | O que faz |
-| :--- | :--- |
-| 1 | Libera ExecutionPolicy (Unrestricted) |
-| 2 | Desativa energia: vídeo, standby e hibernação (AC/DC) |
-| 3 | Ativa tema escuro (apps + sistema) |
-| 4 | Desativa Histórico de Atividades |
-| 5 | Desativa aplicativos em segundo plano |
-| 6 | Instala 10 apps essenciais (Terminal, Firefox, Chrome, 7-Zip, VLC...) |
-| 7 | Instala 19 runtimes (.NET Framework + .NET 5-8 + VC++ 2005-2015+ + Java) |
-
-> ⚙️ Pode pular partes com `-SkipApps` ou `-SkipRuntimes`.
-> 📖 Detalhes completos em [docs/instrucoes.md](./docs/instrucoes.md) (seção Pós-instalação).
+> ⚠️ **Removidos deste repo em 2026-09-12:** `pos-instalacao.ps1`, `Win11Debloat.ps1`,
+> `Win11Debloat.zip` e `Win11Debloat/` agora vivem em
+> [brcesarms/archimedes-after-install-win11](https://github.com/brcesarms/archimedes-after-install-win11).
+> O orquestrador referencia por caminho absoluto — sem duplicação.
+> 📖 Opções completas em `docs/instrucoes.md` do novo módulo.
 
 ## 🛡️ Segurança
 
