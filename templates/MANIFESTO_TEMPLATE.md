@@ -4,6 +4,8 @@
 
 ## 🧾 Informações Gerais
 
+_Identificação da máquina e do serviço._
+
 | Campo | Valor |
 | :--- | :--- |
 | **Cliente** | `<CLIENTE>` |
@@ -14,6 +16,8 @@
 
 ## 💻 Inventário Técnico
 
+_O que havia na máquina antes da formatação: sistema, chave OEM e usuários._
+
 | Item | Valor |
 | :--- | :--- |
 | **Windows** | `<Edição>` |
@@ -22,6 +26,8 @@
 | **Usuários** | `<user1>, <user2>` |
 
 ## 📂 Status de Cópia
+
+_Resultado do backup: ✅ copiado · ☐ não executado · ❌ falhou (revisar log)._
 
 | Pasta | Status | Obs |
 | :--- | :--- | :--- |
@@ -33,11 +39,15 @@
 
 ## 📦 Checklist de Reinstalação
 
+_Programas a reinstalar após a formatação — marque as caixas ao instalar._
+
 - [ ] `<Software 1>` `<versão>`
 - [ ] `<Software 2>` `<versão>`
 - [ ] ...
 
 ## 📝 Observações
+
+_Pendências, arquivos não copiados e observações do técnico._
 
 - <Pendências, arquivos não copiados, peculiaridades>
 
