@@ -33,7 +33,7 @@ ARCHIMEDES_WIN11_SETUP_DIR = os.path.expanduser("~/projetos/archimedes-win11-set
 MANIFESTS_DIR = os.path.join(BASE_DIR, "manifests")
 
 # Local remoto temporário onde os .ps1 são carregados
-REMOTE_SCRIPT_DIR = "C:\\Windows\\Temp\\projeto-bancada"
+REMOTE_SCRIPT_DIR = "C:\\Windows\\Temp\\archimedes-orquestrador"
 
 # Prefixo padrão do comando PowerShell remoto (não-interativo)
 PS_PREFIX = (

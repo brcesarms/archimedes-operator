@@ -52,7 +52,7 @@ Ele roda um script que configura **tudo automaticamente**:
 Abra o **Windows PowerShell** (pode ser normal, não precisa ser admin ainda) e cole:
 
 ```powershell
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/brcesarms/projeto-bancada/main/scripts/powershell/setup-ssh-pri.ps1" -OutFile "$env:USERPROFILE\Downloads\setup-ssh-pri.ps1"
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/brcesarms/archimedes-orquestrador/main/scripts/powershell/setup-ssh-pri.ps1" -OutFile "$env:USERPROFILE\Downloads\setup-ssh-pri.ps1"
 ```
 
 Confirme que baixou:

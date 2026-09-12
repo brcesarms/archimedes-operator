@@ -11,16 +11,15 @@
 1. [Visão Geral e Arquitetura](#-visão-geral-e-arquitetura)
 2. [Conexão e Comunicação SSH](#-conexão-e-comunicação-ssh)
 3. [Etapa 1 — Coleta de Inventário](#-etapa-1--coleta-de-inventário)
-4. [Etapa 2 — Backup com Robocopy](#-etapa-2--backup-com-robocopy)
+4. [Etapa 2 — Backup com Robocopy (módulo externo)](#-etapa-2--backup-com-robocopy-módulo-externo)
 5. [Etapa 3 — Geração do Manifesto](#-etapa-3--geração-do-manifesto)
-6. [Etapa 4 — Desbloat Windows 11](#-etapa-4--desbloat-windows-11-pós-formatação-opcional)
-7. [Etapa 5 — Pós-instalação](#-etapa-5--pós-instalação-ajustes--softwares-essenciais)
-8. [Orquestração em Python](#-orquestração-em-python)
-9. [Menu Interativo](#-menu-interativo)
-10. [Tratamento de Erros e Validação](#-tratamento-de-erros-e-validação)
-11. [Segurança e Boas Práticas](#-segurança-e-boas-práticas)
-12. [Fluxo de Execução Completo](#-fluxo-de-execução-completo)
-13. [🔗 Fontes](#-fontes)
+6. [Etapa 4 — Desbloat e Etapa 5 — Pós-instalação (módulo externo)](#-etapa-4--desbloat-windows-11-e--etapa-5--pós-instalação-módulo-externo)
+7. [Orquestração em Python](#-orquestração-em-python)
+8. [Menu Interativo](#-menu-interativo)
+9. [Tratamento de Erros e Validação](#-tratamento-de-erros-e-validação)
+10. [Segurança e Boas Práticas](#-segurança-e-boas-práticas)
+11. [Fluxo de Execução Completo](#-fluxo-de-execução-completo)
+12. [🔗 Fontes](#-fontes)
 
 ---
 
@@ -220,77 +219,18 @@ $res | ConvertTo-Json -Depth 3
 
 ---
 
-## 📦 Etapa 2 — Backup com Robocopy
+## 📦 Etapa 2 — Backup com Robocopy (módulo externo)
 
-> 💾 **Migrado:** o script `backup-robocopy.ps1` agora vive no repositório dedicado
+> 💾 **Migrado:** o script `backup-robocopy.ps1` vive no repositório dedicado
 > [`brcesarms/archimedes-backup`](https://github.com/brcesarms/archimedes-backup) (`windows/`).
-> O orquestrador deste projeto o referencia por caminho absoluto
-> (`~/projetos/archimedes-backup/windows/backup-robocopy.ps1`).
-> Seção mantida aqui como **referência técnica** da Etapa 2.
-
-### Parâmetros recomendados
-
-```powershell
-robocopy "<ORIGEM>" "<DESTINO_NET_SHARE>" /E /ZB /R:1 /W:1 /XJ /XD "AppData\Local\Temp" "$RECYCLE.BIN" "System Volume Information"
-```
-
-| Flag | Significado | Por que usar |
-| :--- | :--- | :--- |
-| `/E` | Copia subdiretórios, **incluindo vazios** | Não perde estrutura de pastas por falta de arquivos |
-| `/ZB` | Usa modo reiniciável e cai para modo Backup se acesso negado | Resiliência a interrupções + contorna ACL restritas |
-| `/R:1 /W:1` | 1 retry com 1s de espera para arquivos bloqueados | Evita travamento em arquivo em uso |
-| `/XJ` | Exclui pontos de junção (junctions) | Evita loop infinito ao seguir `symlinks` do Windows |
-| `/XD ...` | Exclui diretórios temporários e Lixeira | Não copia lixo que polui o backup |
-
-### Diretórios copiados (por usuário)
-
-| Pasta | Robocopy Origem |
-| :--- | :--- |
-| Desktop | `C:\Users\<user>\Desktop` |
-| Documents | `C:\Users\<user>\Documents` |
-| Downloads | `C:\Users\<user>\Downloads` |
-| Pictures | `C:\Users\<user>\Pictures` |
-
-### Destino: Storage Central
-
-Certifique-se de que o destino é acessível como **UNC/share de rede** a partir da máquina alvo:
-```powershell
-\\<storage-central>\Bancada\<CLIENTE>\
-```
-
-> ⚠️ Se a máquina alvo ainda não tem acesso à rede (formatação com disco local), faça o backup **local primeiro** (ex: `D:\backup_<CLIENTE>\`) e depois transfira via `scp`/`rsync` para o storage.
-
-### Validação de saída do Robocopy
-
-| Exit Code | Significado | Ação |
-| :--- | :--- | :--- |
-| `0` | Nenhum arquivo copiado; nada a fazer | ✅ OK |
-| `1` | Arquivos copiados com sucesso | ✅ OK |
-| `2` | Arquivos extras (já existiam) | ✅ OK |
-| `3` | `1 + 2` | ✅ OK |
-| `4` | Arquivos incompatíveis detectados | ⚠️ Revisar |
-| `5-7` | `4 + (1 ou 2 ou 3)` | ⚠️ Revisar |
-| `8+` | Erros — falha de cópia | ❌ **NÃO terminou OK** — revisar log |
-
-> **Regra:** `$LASTEXITCODE -ge 8` → trata como **falha de backup** e reporta no manifesto.
-
-### Exemplo completo (PowerShell remoto, loop por usuário)
-
-```powershell
-$destino = "\\storage-central\Bancada\CLIENTE_X"
-$usuarios = @($(Get-ChildItem C:\Users -Directory | Where-Object { $_.Name -notin @('Public','Default','Default User','All Users') } | Select-Object -ExpandProperty Name))
-foreach ($u in $usuarios) {
-    foreach ($dir in @('Desktop','Documents','Downloads','Pictures')) {
-        $src = "C:\Users\$u\$dir"
-        if (Test-Path $src) {
-            $dst = "$destino\$u\$dir"
-            robocopy $src $dst /E /ZB /R:1 /W:1 /XJ /XD "AppData\Local\Temp" "$RECYCLE.BIN" "System Volume Information" /LOG+:"C:\Windows\Temp\robocopy_$u.log"
-            $code = $LASTEXITCODE
-            Write-Output "$u|$dir|code=$code"
-        }
-    }
-}
-```
+> O orquestrador o referencia por caminho absoluto
+> (`~/projetos/archimedes-backup/windows/backup-robocopy.ps1`) — sem duplicar código.
+>
+> 📖 **Manual completo** (parâmetros, diretórios, destino, exit codes):
+> [`archimedes-backup/docs/instrucoes.md`](https://github.com/brcesarms/archimedes-backup) e
+> [`docs/preparar-maquina-alvo.md`](https://github.com/brcesarms/archimedes-backup).
+>
+> ⚠️ Regra essencial: exit code do robocopy `>= 8` = **falha de backup** — reportar no manifesto.
 
 ---
 
@@ -405,7 +345,7 @@ O orquestrador está **implementado e funcional**. Fluxo executado por chamada:
 
 ```text
 main() ──► conectar()                    (SSH via chave ed25519)
-   ├──► enviar_script(inventario.ps1)    (SFTP → C:\Windows\Temp\projeto-bancada\)
+   ├──► enviar_script(inventario.ps1)    (SFTP → C:\Windows\Temp\archimedes-orquestrador\)
    ├──► coletar_inventario()             (executa PS1 → json.loads → dict)
    ├──► enviar_script(backup-robocopy.ps1)  # de ~/projetos/archimedes-backup/windows/
    ├──► executar_backup(destino)         (executa PS1 com -Destino → json.loads)
@@ -431,9 +371,9 @@ main() ──► conectar()                    (SSH via chave ed25519)
 > Mesmo com `inventario.ps1` existindo localmente.
 
 **Causa raiz (bug de lógica no `enviar_script`):**
-- A função recebia o caminho **do arquivo** remoto: `C:\Windows\Temp\projeto-bancada\inventario.ps1`
+- A função recebia o caminho **do arquivo** remoto: `C:\Windows\Temp\archimedes-orquestrador\inventario.ps1`
 - O bloco de criação de diretório fazia `sftp.stat(caminho_do_arquivo)` seguido de `sftp.mkdir(caminho_do_arquivo)` — ou seja, tentava criar um **diretório com o nome do arquivo**!
-- Quando `C:\Windows\Temp\projeto-bancada\` não existia, o `mkdir` (que era do "arquivo") não criava o **diretório pai**, e o `sftp.put` falhava com `No such file`.
+- Quando `C:\Windows\Temp\archimedes-orquestrador\` não existia, o `mkdir` (que era do "arquivo") não criava o **diretório pai**, e o `sftp.put` falhava com `No such file`.
 
 **Correção aplicada:**
 ```python
@@ -448,7 +388,7 @@ dir_remoto = posixpath.dirname(destino_remoto).replace("\\", "/")
 try:
     sftp.stat(dir_remoto)
 except FileNotFoundError:
-    sftp.mkdir(dir_remoto)       # ✅ cria C:/Windows/Temp/projeto-bancada
+    sftp.mkdir(dir_remoto)       # ✅ cria C:/Windows/Temp/archimedes-orquestrador
 sftp.put(origem_local, destino_remoto.replace("\\", "/"))  # barras normais
 ```
 
@@ -546,7 +486,7 @@ fi
 ### Dados sensíveis
 - **NUNCA** expor/comitar/logar: chaves OEM, senhas, tokens, chaves SSH, certificados (`*.key`, `*.pem`, `id_rsa`, `.env`).
 - Manifestos reais com dados de cliente ficam **fora do versionamento** (ver `.gitignore` na raiz do repo) — somente o **template** é versionado.
-- O repositório GitHub **`projeto-bancada`** é **público** (decisão do usuário) — portanto:
+- O repositório GitHub **`archimedes-orquestrador`** é **público** (decisão do usuário) — portanto:
   - ⚠️ **Jamais commitar manifestos reais** neste repo. Use `manifests/` local (ignorado) ou storage privado.
   - Se um manifesto real for exposto → **avisar imediatamente** e solicitar rotação da chave OEM/medidas.
 

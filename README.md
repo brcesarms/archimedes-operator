@@ -35,7 +35,7 @@ Automação executada via **OpenCode CLI** para o fluxo de bancada do T.I. — c
 > **Passo 1** — No **Windows PowerShell** (pode ser janela normal), baixe o script:
 
 ```powershell
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/brcesarms/projeto-bancada/main/scripts/powershell/setup-ssh-pri.ps1" -OutFile "$env:USERPROFILE\Downloads\setup-ssh-pri.ps1"
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/brcesarms/archimedes-orquestrador/main/scripts/powershell/setup-ssh-pri.ps1" -OutFile "$env:USERPROFILE\Downloads\setup-ssh-pri.ps1"
 ```
 
 > **Passo 2** — Abra o **Windows PowerShell como Administrador** (botão direito → Executar como administrador) e cole os 3 comandos abaixo:
@@ -60,7 +60,7 @@ Get-Service sshd
 ## 📁 Estrutura do Repositório
 
 ```text
-projeto-bancada/
+archimedes-orquestrador/
 ├── docs/
 │   ├── instrucoes.md             <-- Documento técnico completo (refatorado)
 │   └── preparar-maquina-windows.md <-- 🪟 Guia passo a passo (Windows 11)
@@ -90,7 +90,7 @@ projeto-bancada/
 ## 🛠️ Setup do ambiente (Linux)
 
 ```bash
-cd ~/projetos/projeto-bancada
+cd ~/projetos/archimedes-orquestrador
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt        # runtime (paramiko)
