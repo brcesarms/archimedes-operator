@@ -1,8 +1,8 @@
-# 🏗️ Projeto Bancada
+# 👷‍♂️ Archimedes Operator
 
-> Triagem, inventário técnico e backup forense pré-formatação de máquinas Windows via SSH.
+> Braço Mecânico de Automação Remota SSH/SFTP, Bancada e Backup de Máquinas Windows.
 
-Automação executada via **OpenCode CLI** para o fluxo de bancada do T.I. — coleta inventário (usuários, chave OEM, softwares), **orquestra o backup** (módulo externo [`archimedes-backup`](https://github.com/brcesarms/archimedes-backup)) e gera manifestos em Markdown para o Obsidian.
+Automação de campo executada pelo Archimedes para o fluxo de bancada do T.I. — coleta inventário (usuários, chave OEM, softwares), **orquestra o backup** (módulo dedicado [`archimedes-backup`](https://github.com/brcesarms/archimedes-backup)), pós-instalação/debloat ([`archimedes-win11-setup`](https://github.com/brcesarms/archimedes-win11-setup)) e gera manifestos Markdown para o Obsidian.
 
 ---
 
@@ -35,7 +35,7 @@ Automação executada via **OpenCode CLI** para o fluxo de bancada do T.I. — c
 > **Passo 1** — No **Windows PowerShell** (pode ser janela normal), baixe o script:
 
 ```powershell
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/brcesarms/archimedes-orquestrador/main/scripts/powershell/setup-ssh-pri.ps1" -OutFile "$env:USERPROFILE\Downloads\setup-ssh-pri.ps1"
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/brcesarms/archimedes-operator/main/scripts/powershell/setup-ssh-pri.ps1" -OutFile "$env:USERPROFILE\Downloads\setup-ssh-pri.ps1"
 ```
 
 > **Passo 2** — Abra o **Windows PowerShell como Administrador** (botão direito → Executar como administrador) e cole os 3 comandos abaixo:
