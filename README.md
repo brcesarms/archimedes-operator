@@ -2,7 +2,7 @@
 
 > Braço Mecânico de Automação Remota SSH/SFTP, Bancada e Backup de Máquinas Windows.
 
-Automação de campo executada pelo Archimedes para o fluxo de bancada do T.I. — coleta inventário (usuários, chave OEM, softwares), **orquestra o backup** (módulo dedicado [`archimedes-backup`](https://github.com/brcesarms/archimedes-backup)), pós-instalação/debloat ([`archimedes-win11-setup`](https://github.com/brcesarms/archimedes-win11-setup)) e gera manifestos Markdown para o Obsidian.
+Automação completa e **100% autossuficiente** de bancada do T.I. — integra nativamente coleta de inventário (usuários, chave OEM, softwares), motor de backup forense (Robocopy com suporte a OneDrive), suíte de pós-instalação e debloat do Windows 11, e geração automática de manifestos Markdown para o Obsidian. Não requer nenhuma dependência de repositórios externos.
 
 ---
 

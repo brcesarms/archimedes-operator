@@ -22,18 +22,14 @@ import sys
 
 import paramiko
 
-# Diretórios padrão do projeto
+# Diretórios padrão do projeto (100% autônomo e portátil)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 SCRIPTS_PS_DIR = os.path.join(BASE_DIR, "scripts", "powershell")
-# Backup agora vive no repositório dedicado archimedes-backup (caminho absoluto, sem duplicar código)
-ARCHIMEDES_BACKUP_DIR = os.path.expanduser("~/projetos/archimedes-backup/windows")
-# Pós-instalação + desbloat agora vivem no repositório archimedes-win11-setup
-# (caminho absoluto, sem duplicar código)
-ARCHIMEDES_WIN11_SETUP_DIR = os.path.expanduser("~/projetos/archimedes-win11-setup/windows")
+SCRIPTS_BASH_DIR = os.path.join(BASE_DIR, "scripts", "bash")
 MANIFESTS_DIR = os.path.join(BASE_DIR, "manifests")
 
-# Local remoto temporário onde os .ps1 são carregados
-REMOTE_SCRIPT_DIR = "C:\\Windows\\Temp\\archimedes-orquestrador"
+# Local remoto temporário onde os scripts são carregados
+REMOTE_SCRIPT_DIR = "C:\\Windows\\Temp\\archimedes-operator"
 
 # Prefixo padrão do comando PowerShell remoto (não-interativo)
 PS_PREFIX = (
@@ -146,7 +142,7 @@ def executar_backup(client, destino):
 
     Retorna lista de status por pasta, ou None em falha.
     """
-    script_local = os.path.join(ARCHIMEDES_BACKUP_DIR, "backup-robocopy.ps1")
+    script_local = os.path.join(SCRIPTS_PS_DIR, "backup-robocopy.ps1")
     script_remoto = f"{REMOTE_SCRIPT_DIR}\\backup-robocopy.ps1"
 
     if not enviar_script(client, script_local, script_remoto):
@@ -304,7 +300,7 @@ def executar_pos_instalacao(client, modo="completa"):
     """
     import time
 
-    script_local = os.path.join(ARCHIMEDES_WIN11_SETUP_DIR, "pos-instalacao.ps1")
+    script_local = os.path.join(SCRIPTS_PS_DIR, "pos-instalacao.ps1")
     script_remoto = f"{REMOTE_SCRIPT_DIR}\\pos-instalacao.ps1"
 
     if not enviar_script(client, script_local, script_remoto):
@@ -374,7 +370,7 @@ def executar_debloat(client, switches="-RunDefaults -Silent -CreateRestorePoint"
     """
     import time
 
-    zip_local = os.path.join(ARCHIMEDES_WIN11_SETUP_DIR, "Win11Debloat.zip")
+    zip_local = os.path.join(SCRIPTS_PS_DIR, "Win11Debloat.zip")
     zip_remoto = f"{REMOTE_SCRIPT_DIR}\\Win11Debloat.zip"
     debloat_dir_remoto = f"{REMOTE_SCRIPT_DIR}\\Win11Debloat"
 
